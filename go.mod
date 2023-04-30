@@ -17,6 +17,7 @@ require (
 	github.com/spf13/viper v1.15.0
 	github.com/spyzhov/ajson v0.8.0
 	github.com/swaggest/jsonschema-go v0.3.51
+	github.com/tiny-systems/module v0.0.3
 	github.com/wneessen/go-mail v0.3.9
 	golang.org/x/oauth2 v0.7.0
 	google.golang.org/api v0.118.0
@@ -27,7 +28,6 @@ require (
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/docker/distribution v2.8.1+incompatible // indirect
 	github.com/docker/docker v23.0.4+incompatible // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
@@ -43,6 +43,7 @@ require (
 	github.com/hashicorp/go-version v1.6.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
+	github.com/klauspost/compress v1.16.5 // indirect
 	github.com/labstack/gommon v0.4.0 // indirect
 	github.com/likexian/gokit v0.25.11 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
@@ -63,8 +64,7 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.4.2 // indirect
 	github.com/swaggest/refl v1.1.0 // indirect
-	github.com/tiny-systems/errorpanic v0.0.0-20221030084151-d2ff93361ac4 // indirect
-	github.com/tiny-systems/module v0.0.1 // indirect
+	github.com/tiny-systems/errorpanic v0.7.1 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	go.opencensus.io v0.24.0 // indirect
@@ -82,3 +82,5 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+// replace github.com/tiny-systems/module => ../module

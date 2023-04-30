@@ -11,9 +11,9 @@ import (
 )
 
 const (
-	RouterComponent          = "router"
-	RouterInPort      string = "input"
-	RouterDefaultPort string = "default"
+	RouterComponent   = "router"
+	RouterInPort      = "input"
+	RouterDefaultPort = "default"
 )
 
 // RouteName special type which can carry its value and possible options for enum values
