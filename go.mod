@@ -17,7 +17,7 @@ require (
 	github.com/spf13/viper v1.15.0
 	github.com/spyzhov/ajson v0.8.0
 	github.com/swaggest/jsonschema-go v0.3.51
-	github.com/tiny-systems/module v0.0.3
+	github.com/tiny-systems/module v0.0.5
 	github.com/wneessen/go-mail v0.3.9
 	golang.org/x/oauth2 v0.7.0
 	google.golang.org/api v0.118.0
@@ -28,6 +28,7 @@ require (
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/docker/distribution v2.8.1+incompatible // indirect
 	github.com/docker/docker v23.0.4+incompatible // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
@@ -83,4 +84,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-// replace github.com/tiny-systems/module => ../module
+//replace github.com/tiny-systems/module => ../module

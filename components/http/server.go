@@ -55,7 +55,7 @@ type ServerRequest struct {
 	RequestURI    string     `json:"requestURI" required:"true"`
 	RequestParams url.Values `json:"requestParams" required:"true"`
 	Host          string     `json:"host" required:"true"`
-	Method        string     `json:"method" required:"true" title:"Method" enum:"get,post,patch,put,delete" enumTitles:"GET,POST,PATCH,PUT,DELETE"`
+	Method        string     `json:"method" required:"true" title:"Method" enum:"GET,POST,PATCH,PUT,DELETE" enumTitles:"GET,POST,PATCH,PUT,DELETE"`
 	RealIP        string     `json:"realIP"`
 	Headers       []Header   `json:"headers,omitempty"`
 	Body          any        `json:"body"`

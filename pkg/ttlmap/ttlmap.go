@@ -27,6 +27,7 @@ func New(ctx context.Context, maxTTL int) (m *TTLMap) {
 				m.l.Lock()
 				for k, v := range m.m {
 					if time.Now().Unix()-v.lastAccess > int64(maxTTL) {
+						v = nil
 						delete(m.m, k)
 					}
 				}
