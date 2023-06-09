@@ -1,13 +1,9 @@
-name: Build Publish module to Tiny Systems repository
-
-permissions:
-  contents: write
+name: Build & publish module to Tiny Systems repository.
 
 on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
-
 jobs:
   publish:
     runs-on: ubuntu-latest
