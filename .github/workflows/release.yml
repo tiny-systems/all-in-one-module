@@ -13,4 +13,4 @@ jobs:
       - run: |
           echo "Preparing a release"
           echo "Module name ${{ github.event.repository.name }}"
-          go version
+          go run cmd/main.go build -v ${{github.ref_name}} -n ${{ github.event.repository.name }} -d ${{secrets.TINY_DEV_SECRET}} -c nats://nats.tinysystems.io:4222
