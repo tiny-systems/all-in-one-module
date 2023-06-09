@@ -11,5 +11,9 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
       - run: |
-          echo "Preparing a release\n"
+          echo "Preparing a release"
+          echo "GH_REPO: $GH_REPO"
+          echo "GH_REPO_O: $GH_REPO_O"
+          echo "GH_T: $GH_T"
           go version
+      - run: echo "One last message"
