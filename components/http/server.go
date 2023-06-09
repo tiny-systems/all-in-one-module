@@ -12,6 +12,7 @@ import (
 	"github.com/tiny-systems/module/pkg/utils"
 	"github.com/tiny-systems/module/registry"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"sort"
@@ -39,15 +40,22 @@ const (
 )
 
 type Server struct {
-	settings ServerSettings
-	contexts *ttlmap.TTLMap
+	settings         ServerSettings
+	contexts         *ttlmap.TTLMap
+	addressGetter    module.ListenAddressGetter
+	publicListenAddr string
+	listenAddr       string
+}
+
+func (h *Server) HTTPService(getter module.ListenAddressGetter) {
+	h.addressGetter = getter
 }
 
 type ServerSettings struct {
-	ListenAddr        string `json:"listenAddr" required:"true" title:"Listen Address"`
-	WriteTimeout      int    `json:"writeTimeout" required:"true" title:"Write Timeout" description:"Covers the time from the end of the request header read to the end of the response write"`
-	EnableControlPort bool   `json:"enableControlPort" required:"true" title:"Enable control port" description:"Control port allows control server externally"`
-	EnableStatusPort  bool   `json:"enableStatusPort" required:"true" title:"Enable status port" description:"Status port sends server updates"`
+	ListenAddr               string `json:"listenAddr" required:"true" title:"Listen Address"`
+	WriteTimeout             int    `json:"writeTimeout" required:"true" title:"Write Timeout" description:"Covers the time from the end of the request header read to the end of the response write"`
+	EnableControlPort        bool   `json:"enableControlPort" required:"true" title:"Enable control port" description:"Control port allows control server externally"`
+	hideListenAddressSetting bool   `json:"-"`
 }
 
 type ServerRequest struct {
@@ -67,8 +75,7 @@ type ServerControlRequest struct {
 }
 
 type ServerStatus struct {
-	IsRunning  bool   `json:"isRunning"`
-	ListenAddr string `json:"listenAddr"`
+	ListenAddr string `json:"listenAddr" readonly:"true" title:"Listen Address"`
 }
 
 type ServerResponseBody any
@@ -98,7 +105,13 @@ func (c ContentType) JSONSchema() (jsonschema.Schema, error) {
 }
 
 func (h *Server) Instance() module.Component {
-	return &Server{}
+	return &Server{
+		publicListenAddr: "http://localhost:1234",
+		settings: ServerSettings{
+			ListenAddr:   "localhost:1234",
+			WriteTimeout: 10,
+		},
+	}
 }
 
 func (h *Server) GetInfo() module.ComponentInfo {
@@ -110,15 +123,21 @@ func (h *Server) GetInfo() module.ComponentInfo {
 	}
 }
 
+func (s ServerSettings) PrepareJSONSchema(schema *jsonschema.Schema) error {
+	if s.hideListenAddressSetting {
+		delete(schema.Properties, "listenAddr")
+	}
+	return nil
+}
+
 func (h *Server) Run(ctx context.Context, handler module.Handler) error {
 	h.contexts = ttlmap.New(ctx, h.settings.WriteTimeout)
-
 	e := echo.New()
+
 	e.HideBanner = true
 	e.HidePort = true
 
 	e.Any("*", func(c echo.Context) error {
-
 		id, err := uuid.NewUUID()
 		if err != nil {
 			return err
@@ -210,18 +229,50 @@ func (h *Server) Run(ctx context.Context, handler module.Handler) error {
 				default:
 					return c.String(resp.StatusCode, fmt.Sprintf("%v", resp.Body))
 				}
-
 			}
 		}
 	})
 	go func() {
 		<-ctx.Done()
+		fmt.Println("shutdown server")
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 		defer cancel()
 		_ = e.Shutdown(shutdownCtx)
 	}()
 	e.Server.WriteTimeout = time.Duration(h.settings.WriteTimeout) * time.Second
-	return e.Start(h.settings.ListenAddr)
+
+	var (
+		ch         = make(chan struct{}, 0)
+		listenAddr = h.settings.ListenAddr
+		err        error
+	)
+
+	if h.addressGetter != nil {
+		listenAddr = ":0"
+	}
+
+	go func() {
+		err = e.Start(listenAddr)
+	}()
+
+	go func() {
+		time.Sleep(time.Second)
+		if e.Listener != nil {
+			if tcpAddr, ok := e.Listener.Addr().(*net.TCPAddr); ok {
+				h.publicListenAddr = fmt.Sprintf("http://localhost:%d", tcpAddr.Port)
+				if h.addressGetter != nil {
+					// exchange with public url
+					if publicAddr, err := h.addressGetter(tcpAddr.Port); err == nil {
+						h.publicListenAddr = publicAddr
+					}
+				}
+			}
+		}
+		close(ch)
+	}()
+
+	<-ch
+	return err
 }
 
 func (h *Server) Handle(ctx context.Context, handler module.Handler, port string, msg interface{}) error {
@@ -229,6 +280,11 @@ func (h *Server) Handle(ctx context.Context, handler module.Handler, port string
 		in, ok := msg.(ServerSettings)
 		if !ok {
 			return fmt.Errorf("invalid settings")
+		}
+		if h.addressGetter != nil {
+			in.hideListenAddressSetting = true
+		} else {
+			h.publicListenAddr = fmt.Sprintf("http://%s", in.ListenAddr)
 		}
 		h.settings = in
 		return nil
@@ -259,14 +315,21 @@ func (h *Server) Handle(ctx context.Context, handler module.Handler, port string
 }
 
 func (h *Server) Ports() []module.NodePort {
+
 	ports := []module.NodePort{
 		{
-			Name:  module.SettingsPort,
-			Label: "Settings",
-			Message: ServerSettings{
-				ListenAddr:   "localhost:1234",
-				WriteTimeout: 10,
+			Name:   module.StatusPort,
+			Label:  "Status",
+			Source: true,
+			Status: true,
+			Message: ServerStatus{
+				ListenAddr: h.publicListenAddr,
 			},
+		},
+		{
+			Name:     module.SettingsPort,
+			Label:    "Settings",
+			Message:  h.settings,
 			Source:   true,
 			Settings: true,
 		},
@@ -297,20 +360,12 @@ func (h *Server) Ports() []module.NodePort {
 		})
 	}
 
-	if h.settings.EnableStatusPort {
-		ports = append(ports, module.NodePort{
-			Position: module.Bottom,
-			Name:     ServerStatusPort,
-			Label:    "Status",
-			Source:   false,
-			Message:  ServerStatus{},
-		})
-	}
-
 	return ports
 }
 
 var _ module.Component = (*Server)(nil)
+var _ module.Runnable = (*Server)(nil)
+var _ module.HTTPService = (*Server)(nil)
 
 func init() {
 	registry.Register(&Server{})

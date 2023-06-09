@@ -53,17 +53,22 @@ func (t *Ticker) GetInfo() module.ComponentInfo {
 
 // Run non a pointer receiver copies Ticker with copy of settings
 func (t *Ticker) Run(ctx context.Context, handler module.Handler) error {
-	ticker := time.NewTicker(time.Duration(t.settings.Period) * time.Millisecond)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-			atomic.AddInt64(&t.counter, 1)
-			_ = handler(TickerOutPort, t.settings.Context)
-		case <-ctx.Done():
-			return nil
+	go func() {
+
+		ticker := time.NewTicker(time.Duration(t.settings.Period) * time.Millisecond)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				atomic.AddInt64(&t.counter, 1)
+				_ = handler(TickerOutPort, t.settings.Context)
+			case <-ctx.Done():
+				return
+			}
 		}
-	}
+
+	}()
+	return nil
 }
 
 func (t *Ticker) Handle(ctx context.Context, handler module.Handler, port string, msg interface{}) error {

@@ -17,7 +17,7 @@ require (
 	github.com/spf13/viper v1.15.0
 	github.com/spyzhov/ajson v0.8.0
 	github.com/swaggest/jsonschema-go v0.3.51
-	github.com/tiny-systems/module v0.0.5
+	github.com/tiny-systems/module v0.0.6
 	github.com/wneessen/go-mail v0.3.9
 	golang.org/x/oauth2 v0.7.0
 	google.golang.org/api v0.118.0
@@ -84,4 +84,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-//replace github.com/tiny-systems/module => ../module
+replace github.com/tiny-systems/module => ../module

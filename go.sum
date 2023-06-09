@@ -293,6 +293,8 @@ github.com/tiny-systems/errorpanic v0.7.1 h1:GgbimfhC2wnQ8012SGGxh743ryaJXSSD7bo
 github.com/tiny-systems/errorpanic v0.7.1/go.mod h1:AQobicdSB/J3RzN81pTG4dqgcULaEIrEOvNC8TpSgxw=
 github.com/tiny-systems/module v0.0.5 h1:oTkp20tRy4iWziCPOjEVigwwOyFXZEB6kF5jRRwGcW0=
 github.com/tiny-systems/module v0.0.5/go.mod h1:BI5IBd+eXJXwZ0oDNE5ZTddvxDcxdy0bVqRTOtxjLdw=
+github.com/tiny-systems/module v0.0.6 h1:HcUYEr7kSyHTcX15NwCABnc8YSAyPYRoFQqZ/b9LzWo=
+github.com/tiny-systems/module v0.0.6/go.mod h1:BI5IBd+eXJXwZ0oDNE5ZTddvxDcxdy0bVqRTOtxjLdw=
 github.com/valyala/bytebufferpool v1.0.0 h1:GqA5TC/0021Y/b9FG4Oi9Mr3q7XYx6KllzawFIhcdPw=
 github.com/valyala/bytebufferpool v1.0.0/go.mod h1:6bBcMArwyJ5K/AmCkWv1jt77kVWyCJ6HpOuEn7z0Csc=
 github.com/valyala/fasttemplate v1.2.1/go.mod h1:KHLXt3tVN2HBp8eijSv/kGJopbvo7S+qRAEEKiv+SiQ=

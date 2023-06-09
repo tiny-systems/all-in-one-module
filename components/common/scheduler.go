@@ -81,12 +81,15 @@ func (s *Scheduler) GetInfo() module.ComponentInfo {
 }
 
 func (s *Scheduler) Run(ctx context.Context, handle module.Handler) error {
-	s.runCtx = ctx
-	for _, k := range s.tasks.Keys() {
-		v, _ := s.tasks.Get(k)
-		go s.waitTask(v)
-	}
-	<-s.runCtx.Done()
+
+	go func() {
+		s.runCtx = ctx
+		for _, k := range s.tasks.Keys() {
+			v, _ := s.tasks.Get(k)
+			go s.waitTask(v)
+		}
+		<-s.runCtx.Done()
+	}()
 	return nil
 }
 

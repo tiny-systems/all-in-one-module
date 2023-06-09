@@ -38,8 +38,7 @@ func (t *Start) GetInfo() module.ComponentInfo {
 }
 
 func (t *Start) Run(ctx context.Context, handle module.Handler) error {
-	_ = handle(StarterOutPort, t.settings.Context)
-	<-ctx.Done()
+	go handle(StarterOutPort, t.settings.Context)
 	return nil
 }
 
