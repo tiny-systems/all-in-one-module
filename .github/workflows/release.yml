@@ -10,4 +10,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-go@v4
-      - run: go version
+      - run: |
+          echo "Preparing a release\n"
+          go version
