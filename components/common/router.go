@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/goccy/go-json"
 	"github.com/swaggest/jsonschema-go"
-	"github.com/tiny-systems/module/pkg/module"
+	"github.com/tiny-systems/module/module"
 	"github.com/tiny-systems/module/registry"
 	"strings"
 )

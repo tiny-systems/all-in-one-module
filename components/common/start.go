@@ -3,7 +3,7 @@ package common
 import (
 	"context"
 	"fmt"
-	"github.com/tiny-systems/module/pkg/module"
+	"github.com/tiny-systems/module/module"
 	"github.com/tiny-systems/module/registry"
 )
 
@@ -37,8 +37,9 @@ func (t *Start) GetInfo() module.ComponentInfo {
 	}
 }
 
-func (t *Start) Run(ctx context.Context, handle module.Handler) error {
-	go handle(StarterOutPort, t.settings.Context)
+func (t *Start) Emit(ctx context.Context, handle module.Handler) error {
+	handle(StarterOutPort, t.settings.Context)
+	<-ctx.Done()
 	return nil
 }
 
@@ -72,6 +73,7 @@ func (t *Start) Ports() []module.NodePort {
 	}
 }
 
+var _ module.Emitter = (*Start)(nil)
 var _ module.Component = (*Start)(nil)
 
 func init() {

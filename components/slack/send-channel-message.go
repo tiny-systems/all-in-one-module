@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/slack-go/slack"
-	"github.com/tiny-systems/module/pkg/module"
+	"github.com/tiny-systems/module/module"
 	"github.com/tiny-systems/module/registry"
 )
 

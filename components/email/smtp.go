@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/tiny-systems/module/pkg/module"
+	"github.com/tiny-systems/module/module"
 	"github.com/tiny-systems/module/registry"
 	"github.com/wneessen/go-mail"
 )

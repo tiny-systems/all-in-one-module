@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/goccy/go-json"
 	cmap "github.com/orcaman/concurrent-map/v2"
-	"github.com/tiny-systems/module/pkg/module"
+	"github.com/tiny-systems/module/module"
 	"github.com/tiny-systems/module/registry"
 	"time"
 )
@@ -80,17 +80,14 @@ func (s *Scheduler) GetInfo() module.ComponentInfo {
 	}
 }
 
-func (s *Scheduler) Run(ctx context.Context, handle module.Handler) error {
-
-	go func() {
-		s.runCtx = ctx
-		for _, k := range s.tasks.Keys() {
-			v, _ := s.tasks.Get(k)
-			go s.waitTask(v)
-		}
-		<-s.runCtx.Done()
-	}()
-	return nil
+func (s *Scheduler) Emit(ctx context.Context, handle module.Handler) error {
+	s.runCtx = ctx
+	for _, k := range s.tasks.Keys() {
+		v, _ := s.tasks.Get(k)
+		go s.waitTask(v)
+	}
+	<-s.runCtx.Done()
+	return ctx.Err()
 }
 
 func (s *Scheduler) Handle(ctx context.Context, handler module.Handler, port string, msg interface{}) error {
@@ -138,18 +135,6 @@ func (s *Scheduler) Handle(ctx context.Context, handler module.Handler, port str
 	return nil
 }
 
-func (s *Scheduler) isRunning() bool {
-	if s.runCtx == nil || s.runCtx.Err() != nil {
-		return false
-	}
-	select {
-	case <-s.runCtx.Done():
-	default:
-		return true
-	}
-	return false
-}
-
 func (s *Scheduler) addOrUpdateTask(id string, start bool, duration time.Duration, f func()) {
 	if d, ok := s.tasks.Get(id); ok {
 		// job is registered
@@ -171,9 +156,10 @@ func (s *Scheduler) addOrUpdateTask(id string, start bool, duration time.Duratio
 		call:  f,
 	}
 	s.tasks.Set(id, tt)
-	if s.isRunning() {
-		go s.waitTask(tt)
-	}
+
+	//if s.isRunning() {
+	//	go s.waitTask(tt)
+	//}
 }
 
 func (s *Scheduler) waitTask(d *task) {
@@ -229,9 +215,7 @@ func (s *Scheduler) Ports() []module.NodePort {
 }
 
 func (s *Scheduler) debugTasks() {
-	if !s.isRunning() {
-		return
-	}
+
 	ticker := time.NewTicker(time.Second * 5)
 	for {
 		select {
@@ -250,7 +234,7 @@ func (s *Scheduler) debugTasks() {
 var scheduler = (*Scheduler)(nil)
 
 var _ module.Component = scheduler
-var _ module.Runnable = scheduler
+var _ module.Emitter = scheduler
 var _ module.StatefulComponent = scheduler
 
 func init() {

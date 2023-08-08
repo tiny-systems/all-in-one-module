@@ -2,7 +2,7 @@ package array
 
 import (
 	"context"
-	"github.com/tiny-systems/module/pkg/module"
+	"github.com/tiny-systems/module/module"
 	"reflect"
 	"testing"
 )

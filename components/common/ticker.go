@@ -3,7 +3,7 @@ package common
 import (
 	"context"
 	"fmt"
-	"github.com/tiny-systems/module/pkg/module"
+	"github.com/tiny-systems/module/module"
 	"github.com/tiny-systems/module/registry"
 	"sync/atomic"
 	"time"
@@ -34,7 +34,9 @@ type Ticker struct {
 
 func (t *Ticker) Instance() module.Component {
 	return &Ticker{
-		settings: TickerSettings{},
+		settings: TickerSettings{
+			Period: 1000,
+		},
 	}
 }
 
@@ -51,24 +53,20 @@ func (t *Ticker) GetInfo() module.ComponentInfo {
 	}
 }
 
-// Run non a pointer receiver copies Ticker with copy of settings
-func (t *Ticker) Run(ctx context.Context, handler module.Handler) error {
-	go func() {
-
-		ticker := time.NewTicker(time.Duration(t.settings.Period) * time.Millisecond)
-		defer ticker.Stop()
-		for {
-			select {
-			case <-ticker.C:
-				atomic.AddInt64(&t.counter, 1)
-				_ = handler(TickerOutPort, t.settings.Context)
-			case <-ctx.Done():
-				return
-			}
+// Emit non a pointer receiver copies Ticker with copy of settings
+func (t *Ticker) Emit(ctx context.Context, handler module.Handler) error {
+	ticker := time.NewTicker(time.Duration(t.settings.Period) * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			atomic.AddInt64(&t.counter, 1)
+			_ = handler(TickerOutPort, t.settings.Context)
+		case <-ctx.Done():
+			return ctx.Err()
 		}
+	}
 
-	}()
-	return nil
 }
 
 func (t *Ticker) Handle(ctx context.Context, handler module.Handler, port string, msg interface{}) error {
@@ -127,7 +125,7 @@ func (t *Ticker) Ports() []module.NodePort {
 }
 
 var _ module.Component = (*Ticker)(nil)
-var _ module.Runnable = (*Ticker)(nil)
+var _ module.Emitter = (*Ticker)(nil)
 
 func init() {
 	registry.Register(&Ticker{})

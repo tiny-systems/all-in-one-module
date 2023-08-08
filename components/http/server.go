@@ -8,7 +8,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/swaggest/jsonschema-go"
 	"github.com/tiny-systems/main/pkg/ttlmap"
-	"github.com/tiny-systems/module/pkg/module"
+	"github.com/tiny-systems/module/module"
 	"github.com/tiny-systems/module/pkg/utils"
 	"github.com/tiny-systems/module/registry"
 	"io"
@@ -82,7 +82,7 @@ type ServerResponseBody any
 
 type ServerResponse struct {
 	RequestID   string             `json:"requestID" required:"true" title:"Request ID" minLength:"1" description:"To match response with request pass request ID to response port" propertyOrder:"1"`
-	StatusCode  int                `json:"statusCode" required:"true" title:"Status Code" description:"HTTP status code for response" propertyOrder:"2"`
+	StatusCode  int                `json:"statusCode" required:"true" title:"Status Code" description:"HTTP status code for response" minimum:"100" default:"200" maximum:"599" propertyOrder:"2"`
 	ContentType ContentType        `json:"contentType" required:"true" propertyOrder:"3"`
 	Headers     []Header           `json:"headers"  title:"Response headers" propertyOrder:"4"`
 	Body        ServerResponseBody `json:"body" title:"Response body" configurable:"true" propertyOrder:"5"`
@@ -130,7 +130,7 @@ func (s ServerSettings) PrepareJSONSchema(schema *jsonschema.Schema) error {
 	return nil
 }
 
-func (h *Server) Run(ctx context.Context, handler module.Handler) error {
+func (h *Server) Emit(ctx context.Context, handler module.Handler) error {
 	h.contexts = ttlmap.New(ctx, h.settings.WriteTimeout)
 	e := echo.New()
 
@@ -234,7 +234,6 @@ func (h *Server) Run(ctx context.Context, handler module.Handler) error {
 	})
 	go func() {
 		<-ctx.Done()
-		fmt.Println("shutdown server")
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 		defer cancel()
 		_ = e.Shutdown(shutdownCtx)
@@ -364,7 +363,7 @@ func (h *Server) Ports() []module.NodePort {
 }
 
 var _ module.Component = (*Server)(nil)
-var _ module.Runnable = (*Server)(nil)
+var _ module.Emitter = (*Server)(nil)
 var _ module.HTTPService = (*Server)(nil)
 
 func init() {

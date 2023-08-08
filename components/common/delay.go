@@ -3,7 +3,7 @@ package common
 import (
 	"context"
 	"fmt"
-	"github.com/tiny-systems/module/pkg/module"
+	"github.com/tiny-systems/module/module"
 	"github.com/tiny-systems/module/registry"
 	"time"
 )

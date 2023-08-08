@@ -3,7 +3,7 @@ package google
 import (
 	"context"
 	"fmt"
-	"github.com/tiny-systems/module/pkg/module"
+	"github.com/tiny-systems/module/module"
 	"github.com/tiny-systems/module/registry"
 	"golang.org/x/oauth2/google"
 )
