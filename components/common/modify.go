@@ -51,18 +51,18 @@ func (t *Modify) Handle(ctx context.Context, handler module.Handler, port string
 func (t *Modify) Ports() []module.NodePort {
 	return []module.NodePort{
 		{
-			Name:     ModifyInPort,
-			Label:    "In",
-			Source:   true,
-			Message:  ModifyInMessage{},
-			Position: module.Left,
+			Name:          ModifyInPort,
+			Label:         "In",
+			Source:        true,
+			Configuration: ModifyInMessage{},
+			Position:      module.Left,
 		},
 		{
-			Name:     ModifyOutPort,
-			Label:    "Out",
-			Source:   false,
-			Message:  ModifyOutMessage{},
-			Position: module.Right,
+			Name:          ModifyOutPort,
+			Label:         "Out",
+			Source:        false,
+			Configuration: ModifyOutMessage{},
+			Position:      module.Right,
 		},
 	}
 }

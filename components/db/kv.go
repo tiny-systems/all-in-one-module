@@ -190,35 +190,35 @@ func (k *KeyValueStore) Handle(ctx context.Context, output module.Handler, port 
 func (k *KeyValueStore) Ports() []module.NodePort {
 	ports := []module.NodePort{
 		{
-			Name:     PortQuery,
-			Label:    "Query",
-			Source:   true,
-			Message:  KeyValueQueryRequest{},
-			Position: module.Left,
+			Name:          PortQuery,
+			Label:         "Query",
+			Source:        true,
+			Configuration: KeyValueQueryRequest{},
+			Position:      module.Left,
 		},
 
 		{
 			Name:   PortStore,
 			Label:  "Store",
 			Source: true,
-			Message: KeyValueStoreRequest{
+			Configuration: KeyValueStoreRequest{
 				Operation: PortStore,
 			},
 			Position: module.Left,
 		},
 		{
-			Name:     PortQueryResult,
-			Label:    "Query result",
-			Source:   false,
-			Message:  KeyValueQueryResult{},
-			Position: module.Right,
+			Name:          PortQueryResult,
+			Label:         "Query result",
+			Source:        false,
+			Configuration: KeyValueQueryResult{},
+			Position:      module.Right,
 		},
 		{
 			Name:     module.SettingsPort,
 			Label:    "Settings",
 			Source:   true,
 			Settings: true,
-			Message: KeyValueStoreSettings{
+			Configuration: KeyValueStoreSettings{
 				PrimaryKey: "id",
 				Document: KeyValueStoreDocument{
 					"id": "ID",
@@ -228,11 +228,11 @@ func (k *KeyValueStore) Ports() []module.NodePort {
 	}
 	if k.settings.EnableStoreResultPort {
 		ports = append(ports, module.NodePort{
-			Name:     PortStoreResult,
-			Label:    "Store result",
-			Source:   false,
-			Message:  KeyValueStoreResult{},
-			Position: module.Right,
+			Name:          PortStoreResult,
+			Label:         "Store result",
+			Source:        false,
+			Configuration: KeyValueStoreResult{},
+			Position:      module.Right,
 		})
 	}
 	return ports

@@ -129,16 +129,16 @@ func (c *CalendarGetEvents) getEvents(ctx context.Context, req CalendarGetEvents
 func (c *CalendarGetEvents) Ports() []module.NodePort {
 	ports := []module.NodePort{
 		{
-			Name:     module.SettingsPort,
-			Label:    "Settings",
-			Message:  CalendarGetEventsSettings{},
-			Source:   true,
-			Settings: true,
+			Name:          module.SettingsPort,
+			Label:         "Settings",
+			Configuration: CalendarGetEventsSettings{},
+			Source:        true,
+			Settings:      true,
 		},
 		{
 			Name:  "request",
 			Label: "Request",
-			Message: CalendarGetEventsRequestPort{
+			Configuration: CalendarGetEventsRequestPort{
 				Request: CalendarGetEventsRequest{
 					Config: ClientConfig{
 						Scopes: []string{"https://www.googleapis.com/auth/calendar.events.readonly"},
@@ -153,20 +153,20 @@ func (c *CalendarGetEvents) Ports() []module.NodePort {
 			Position: module.Left,
 		},
 		{
-			Name:     "success",
-			Label:    "Success",
-			Source:   false,
-			Position: module.Right,
-			Message:  CalendarGetEventSuccess{},
+			Name:          "success",
+			Label:         "Success",
+			Source:        false,
+			Position:      module.Right,
+			Configuration: CalendarGetEventSuccess{},
 		}}
 
 	if c.settings.EnableErrorPort {
 		ports = append(ports, module.NodePort{
-			Position: module.Bottom,
-			Name:     "error",
-			Label:    "Error",
-			Source:   false,
-			Message:  CalendarGetEventsError{},
+			Position:      module.Bottom,
+			Name:          "error",
+			Label:         "Error",
+			Source:        false,
+			Configuration: CalendarGetEventsError{},
 		})
 	}
 	return ports

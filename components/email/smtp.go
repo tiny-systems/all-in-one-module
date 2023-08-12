@@ -173,17 +173,17 @@ func (t *SmtpSender) Handle(ctx context.Context, responseHandler module.Handler,
 func (t *SmtpSender) Ports() []module.NodePort {
 	ports := []module.NodePort{
 		{
-			Name:     module.SettingsPort,
-			Label:    "Settings",
-			Source:   true,
-			Settings: true,
-			Message:  SenderSettings{},
+			Name:          module.SettingsPort,
+			Label:         "Settings",
+			Source:        true,
+			Settings:      true,
+			Configuration: SenderSettings{},
 		},
 		{
 			Name:   PortIn,
 			Label:  "In",
 			Source: true,
-			Message: SendEmail{
+			Configuration: SendEmail{
 				Email: EmailConfig{
 					Body:        "Email text",
 					ContentType: "text/html",
@@ -204,21 +204,21 @@ func (t *SmtpSender) Ports() []module.NodePort {
 	}
 	if t.settings.EnableSuccessPort {
 		ports = append(ports, module.NodePort{
-			Position: module.Right,
-			Name:     PortSuccess,
-			Label:    "Success",
-			Source:   false,
-			Message:  SendMessageSuccess{},
+			Position:      module.Right,
+			Name:          PortSuccess,
+			Label:         "Success",
+			Source:        false,
+			Configuration: SendMessageSuccess{},
 		})
 	}
 
 	if t.settings.EnableErrorPort {
 		ports = append(ports, module.NodePort{
-			Position: module.Bottom,
-			Name:     PortError,
-			Label:    "Error",
-			Source:   false,
-			Message:  SendMessageError{},
+			Position:      module.Bottom,
+			Name:          PortError,
+			Label:         "Error",
+			Source:        false,
+			Configuration: SendMessageError{},
 		})
 	}
 

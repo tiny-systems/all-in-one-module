@@ -251,6 +251,7 @@ func (h *Server) Emit(ctx context.Context, handler module.Handler) error {
 	}
 
 	go func() {
+		defer close(ch)
 		err = e.Start(listenAddr)
 	}()
 
@@ -267,7 +268,6 @@ func (h *Server) Emit(ctx context.Context, handler module.Handler) error {
 				}
 			}
 		}
-		close(ch)
 	}()
 
 	<-ch
@@ -321,29 +321,29 @@ func (h *Server) Ports() []module.NodePort {
 			Label:  "Status",
 			Source: true,
 			Status: true,
-			Message: ServerStatus{
+			Configuration: ServerStatus{
 				ListenAddr: h.publicListenAddr,
 			},
 		},
 		{
-			Name:     module.SettingsPort,
-			Label:    "Settings",
-			Message:  h.settings,
-			Source:   true,
-			Settings: true,
+			Name:          module.SettingsPort,
+			Label:         "Settings",
+			Configuration: h.settings,
+			Source:        true,
+			Settings:      true,
 		},
 		{
-			Name:     ServerRequestPort,
-			Label:    "Request",
-			Message:  ServerRequest{},
-			Position: module.Right,
+			Name:          ServerRequestPort,
+			Label:         "Request",
+			Configuration: ServerRequest{},
+			Position:      module.Right,
 		},
 		{
 			Name:     ServerResponsePort,
 			Label:    "Response",
 			Source:   true,
 			Position: module.Right,
-			Message: ServerResponse{
+			Configuration: ServerResponse{
 				StatusCode: 200,
 			},
 		},
@@ -351,11 +351,11 @@ func (h *Server) Ports() []module.NodePort {
 
 	if h.settings.EnableControlPort {
 		ports = append(ports, module.NodePort{
-			Position: module.Left,
-			Name:     ServerControlPort,
-			Label:    "Control",
-			Source:   true,
-			Message:  ServerControlRequest{},
+			Position:      module.Left,
+			Name:          ServerControlPort,
+			Label:         "Control",
+			Source:        true,
+			Configuration: ServerControlRequest{},
 		})
 	}
 

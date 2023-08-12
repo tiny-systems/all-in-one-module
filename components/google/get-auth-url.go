@@ -71,17 +71,17 @@ func (a *GetAuthUrl) Ports() []module.NodePort {
 			Name:     "in",
 			Label:    "In",
 			Position: module.Left,
-			Message: GetAuthUrlInMessage{
+			Configuration: GetAuthUrlInMessage{
 				AccessType:    "offline",
 				ApprovalForce: true,
 			},
 		},
 		{
-			Source:   false,
-			Name:     "out",
-			Label:    "Out",
-			Position: module.Right,
-			Message:  GetAuthUrlOutMessage{},
+			Source:        false,
+			Name:          "out",
+			Label:         "Out",
+			Position:      module.Right,
+			Configuration: GetAuthUrlOutMessage{},
 		},
 	}
 }

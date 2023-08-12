@@ -57,18 +57,18 @@ func (t *Start) Handle(ctx context.Context, handler module.Handler, port string,
 func (t *Start) Ports() []module.NodePort {
 	return []module.NodePort{
 		{
-			Name:     module.SettingsPort,
-			Label:    "Settings",
-			Source:   true,
-			Settings: true,
-			Message:  StartSettings{},
+			Name:          module.SettingsPort,
+			Label:         "Settings",
+			Source:        true,
+			Settings:      true,
+			Configuration: StartSettings{},
 		},
 		{
-			Name:     StarterOutPort,
-			Label:    "Out",
-			Source:   false,
-			Position: module.Right,
-			Message:  new(StartContext),
+			Name:          StarterOutPort,
+			Label:         "Out",
+			Source:        false,
+			Position:      module.Right,
+			Configuration: new(StartContext),
 		},
 	}
 }

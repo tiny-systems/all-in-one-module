@@ -66,18 +66,18 @@ func (a *ExchangeAuthCode) Handle(ctx context.Context, output module.Handler, po
 func (a *ExchangeAuthCode) Ports() []module.NodePort {
 	return []module.NodePort{
 		{
-			Source:   true,
-			Name:     "in",
-			Label:    "In",
-			Position: module.Left,
-			Message:  ExchangeAuthCodeInMessage{},
+			Source:        true,
+			Name:          "in",
+			Label:         "In",
+			Position:      module.Left,
+			Configuration: ExchangeAuthCodeInMessage{},
 		},
 		{
-			Source:   false,
-			Name:     "out",
-			Label:    "Out",
-			Position: module.Right,
-			Message:  ExchangeAuthCodeOutMessage{},
+			Source:        false,
+			Name:          "out",
+			Label:         "Out",
+			Position:      module.Right,
+			Configuration: ExchangeAuthCodeOutMessage{},
 		},
 	}
 }

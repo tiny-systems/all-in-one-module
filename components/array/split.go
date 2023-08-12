@@ -65,18 +65,18 @@ func (t *Split) Handle(ctx context.Context, handler module.Handler, port string,
 func (t *Split) Ports() []module.NodePort {
 	return []module.NodePort{
 		{
-			Name:     SplitInPort,
-			Label:    "In",
-			Source:   true,
-			Message:  SplitInMessage{},
-			Position: module.Left,
+			Name:          SplitInPort,
+			Label:         "In",
+			Source:        true,
+			Configuration: SplitInMessage{},
+			Position:      module.Left,
 		},
 		{
-			Name:     SplitOutPort,
-			Label:    "Out",
-			Source:   false,
-			Message:  SplitOutMessage{},
-			Position: module.Right,
+			Name:          SplitOutPort,
+			Label:         "Out",
+			Source:        false,
+			Configuration: SplitOutMessage{},
+			Position:      module.Right,
 		},
 	}
 }

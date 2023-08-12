@@ -67,17 +67,17 @@ func (t *Delay) Ports() []module.NodePort {
 			Name:   DelayInPort,
 			Label:  "In",
 			Source: true,
-			Message: DelayInMessage{
+			Configuration: DelayInMessage{
 				Delay: 1000,
 			},
 			Position: module.Left,
 		},
 		{
-			Name:     DelayOutPort,
-			Label:    "Out",
-			Source:   false,
-			Message:  DelayOutMessage{},
-			Position: module.Right,
+			Name:          DelayOutPort,
+			Label:         "Out",
+			Source:        false,
+			Configuration: DelayOutMessage{},
+			Position:      module.Right,
 		},
 	}
 }

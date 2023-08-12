@@ -107,17 +107,17 @@ func (t *ChannelSender) Handle(ctx context.Context, responseHandler module.Handl
 func (t *ChannelSender) Ports() []module.NodePort {
 	ports := []module.NodePort{
 		{
-			Name:     module.SettingsPort,
-			Label:    "Settings",
-			Source:   true,
-			Settings: true,
-			Message:  ChannelSenderSettings{},
+			Name:          module.SettingsPort,
+			Label:         "Settings",
+			Source:        true,
+			Settings:      true,
+			Configuration: ChannelSenderSettings{},
 		},
 		{
 			Name:   PortIn,
 			Label:  "In",
 			Source: true,
-			Message: SendChannelRequest{
+			Configuration: SendChannelRequest{
 				Message: Message{
 					Text: "Message to send",
 				},
@@ -127,21 +127,21 @@ func (t *ChannelSender) Ports() []module.NodePort {
 	}
 	if t.settings.EnableSuccessPort {
 		ports = append(ports, module.NodePort{
-			Position: module.Right,
-			Name:     PortSuccess,
-			Label:    "Success",
-			Source:   false,
-			Message:  SendSlackChannelSuccess{},
+			Position:      module.Right,
+			Name:          PortSuccess,
+			Label:         "Success",
+			Source:        false,
+			Configuration: SendSlackChannelSuccess{},
 		})
 	}
 
 	if t.settings.EnableErrorPort {
 		ports = append(ports, module.NodePort{
-			Position: module.Bottom,
-			Name:     PortError,
-			Label:    "Error",
-			Source:   false,
-			Message:  SendSlackChannelError{},
+			Position:      module.Bottom,
+			Name:          PortError,
+			Label:         "Error",
+			Source:        false,
+			Configuration: SendSlackChannelError{},
 		})
 	}
 

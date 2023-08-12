@@ -58,7 +58,7 @@ func (h Client) Ports() []module.NodePort {
 			Name:   "request",
 			Label:  "Request",
 			Source: true,
-			Message: ClientRequest{
+			Configuration: ClientRequest{
 				Request: Request{
 					Method:  "get",
 					Headers: make([]Header, 0),
@@ -68,10 +68,10 @@ func (h Client) Ports() []module.NodePort {
 			Position: module.Left,
 		},
 		{
-			Name:     "response",
-			Label:    "Response",
-			Position: module.Left,
-			Message:  ClientResponse{},
+			Name:          "response",
+			Label:         "Response",
+			Position:      module.Left,
+			Configuration: ClientResponse{},
 		},
 	}
 }

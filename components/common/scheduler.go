@@ -174,17 +174,17 @@ func (s *Scheduler) waitTask(d *task) {
 func (s *Scheduler) Ports() []module.NodePort {
 	ports := []module.NodePort{
 		{
-			Name:     module.SettingsPort,
-			Label:    "Settings",
-			Source:   true,
-			Settings: true,
-			Message:  SchedulerSettings{},
+			Name:          module.SettingsPort,
+			Label:         "Settings",
+			Source:        true,
+			Settings:      true,
+			Configuration: SchedulerSettings{},
 		},
 		{
 			Name:   SchedulerInPort,
 			Label:  "Tasks",
 			Source: true,
-			Message: SchedulerInMessage{
+			Configuration: SchedulerInMessage{
 				Task: Task{
 					ID:       "someID2323",
 					DateTime: time.Now(),
@@ -194,20 +194,20 @@ func (s *Scheduler) Ports() []module.NodePort {
 			Position: module.Left,
 		},
 		{
-			Name:     SchedulerOutPort,
-			Label:    "Scheduled",
-			Source:   false,
-			Message:  SchedulerOutMessage{},
-			Position: module.Right,
+			Name:          SchedulerOutPort,
+			Label:         "Scheduled",
+			Source:        false,
+			Configuration: SchedulerOutMessage{},
+			Position:      module.Right,
 		},
 	}
 	if s.settings.EnableAckPort {
 		ports = append(ports, module.NodePort{
-			Name:     SchedulerAckPort,
-			Label:    "Ack",
-			Source:   false,
-			Message:  SchedulerTaskAck{},
-			Position: module.Bottom,
+			Name:          SchedulerAckPort,
+			Label:         "Ack",
+			Source:        false,
+			Configuration: SchedulerTaskAck{},
+			Position:      module.Bottom,
 		})
 	}
 

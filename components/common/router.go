@@ -128,25 +128,25 @@ func (t *Router) Ports() []module.NodePort {
 
 	ports := []module.NodePort{
 		{
-			Name:     module.SettingsPort,
-			Label:    "Settings",
-			Source:   true,
-			Settings: true,
-			Message:  t.settings,
+			Name:          module.SettingsPort,
+			Label:         "Settings",
+			Source:        true,
+			Settings:      true,
+			Configuration: t.settings,
 		},
 		{
-			Position: module.Left,
-			Name:     RouterInPort,
-			Label:    "IN",
-			Source:   true,
-			Message:  inMessage,
+			Position:      module.Left,
+			Name:          RouterInPort,
+			Label:         "IN",
+			Source:        true,
+			Configuration: inMessage,
 		},
 		{
 			Position: module.Bottom,
 			Name:     RouterDefaultPort,
 			Label:    "DEFAULT",
 			Source:   false,
-			Message: RouterOutMessage{
+			Configuration: RouterOutMessage{
 				Context: inMessage.Context,
 				Route:   RouterDefaultPort,
 			},
@@ -154,11 +154,11 @@ func (t *Router) Ports() []module.NodePort {
 	}
 	for _, r := range t.settings.Routes {
 		ports = append(ports, module.NodePort{
-			Position: module.Right,
-			Name:     getPortNameFromRoute(r),
-			Label:    strings.ToTitle(r),
-			Source:   false,
-			Message:  RouterOutMessage{},
+			Position:      module.Right,
+			Name:          getPortNameFromRoute(r),
+			Label:         strings.ToTitle(r),
+			Source:        false,
+			Configuration: RouterOutMessage{},
 		})
 	}
 	return ports

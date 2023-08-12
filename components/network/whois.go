@@ -95,24 +95,24 @@ func (t *Whois) Ports() []module.NodePort {
 			Name:   DomainWhoisInPort,
 			Label:  "In",
 			Source: true,
-			Message: DomainWhoisRequest{
+			Configuration: DomainWhoisRequest{
 				DomainName: "example.com",
 			},
 			Position: module.Left,
 		},
 		{
-			Name:     DomainWhoisSuccessPort,
-			Label:    "Success",
-			Source:   false,
-			Message:  DomainWhoisSuccess{},
-			Position: module.Right,
+			Name:          DomainWhoisSuccessPort,
+			Label:         "Success",
+			Source:        false,
+			Configuration: DomainWhoisSuccess{},
+			Position:      module.Right,
 		},
 		{
-			Name:     DomainWhoisErrorPort,
-			Label:    "Error",
-			Source:   false,
-			Message:  DomainWhoisError{},
-			Position: module.Right,
+			Name:          DomainWhoisErrorPort,
+			Label:         "Error",
+			Source:        false,
+			Configuration: DomainWhoisError{},
+			Position:      module.Right,
 		},
 	}
 }

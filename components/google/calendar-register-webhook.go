@@ -81,16 +81,16 @@ func (h *CalendarRegisterWebhook) Handle(ctx context.Context, handler module.Han
 func (h *CalendarRegisterWebhook) Ports() []module.NodePort {
 	ports := []module.NodePort{
 		{
-			Name:     module.SettingsPort,
-			Label:    "Settings",
-			Message:  CalendarRegisterWebhookSettings{},
-			Source:   true,
-			Settings: true,
+			Name:          module.SettingsPort,
+			Label:         "Settings",
+			Configuration: CalendarRegisterWebhookSettings{},
+			Source:        true,
+			Settings:      true,
 		},
 		{
 			Name:  "request",
 			Label: "Request",
-			Message: CalendarRegisterWebhookRequest{
+			Configuration: CalendarRegisterWebhookRequest{
 				Channel: CalendarRegisterChannel{
 					Type: "web_hook",
 				},
@@ -102,20 +102,20 @@ func (h *CalendarRegisterWebhook) Ports() []module.NodePort {
 			Position: module.Left,
 		},
 		{
-			Name:     "success",
-			Label:    "Success",
-			Source:   false,
-			Position: module.Right,
-			Message:  CalendarRegisterWebhookSuccess{},
+			Name:          "success",
+			Label:         "Success",
+			Source:        false,
+			Position:      module.Right,
+			Configuration: CalendarRegisterWebhookSuccess{},
 		},
 	}
 	if h.settings.EnableErrorPort {
 		ports = append(ports, module.NodePort{
-			Position: module.Bottom,
-			Name:     "error",
-			Label:    "Error",
-			Source:   false,
-			Message:  CalendarRegisterWebhookError{},
+			Position:      module.Bottom,
+			Name:          "error",
+			Label:         "Error",
+			Source:        false,
+			Configuration: CalendarRegisterWebhookError{},
 		})
 	}
 

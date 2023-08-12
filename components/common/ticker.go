@@ -60,6 +60,7 @@ func (t *Ticker) Emit(ctx context.Context, handler module.Handler) error {
 	for {
 		select {
 		case <-ticker.C:
+			fmt.Println("tick")
 			atomic.AddInt64(&t.counter, 1)
 			_ = handler(TickerOutPort, t.settings.Context)
 		case <-ctx.Done():
@@ -91,7 +92,7 @@ func (t *Ticker) Ports() []module.NodePort {
 			Label:  "Status",
 			Source: true,
 			Status: true,
-			Message: TickerStatus{
+			Configuration: TickerStatus{
 				Status: fmt.Sprintf("All good: %d", t.counter),
 			},
 		},
@@ -100,25 +101,25 @@ func (t *Ticker) Ports() []module.NodePort {
 			Label:    "Settings",
 			Source:   true,
 			Settings: true,
-			Message: TickerSettings{
+			Configuration: TickerSettings{
 				Period: 1000,
 			},
 		},
 		{
-			Name:     TickerOutPort,
-			Label:    "Out",
-			Source:   false,
-			Position: module.Right,
-			Message:  new(TickerContext),
+			Name:          TickerOutPort,
+			Label:         "Out",
+			Source:        false,
+			Position:      module.Right,
+			Configuration: new(TickerContext),
 		},
 	}
 	if t.settings.EnableControlPort {
 		ports = append(ports, module.NodePort{
-			Position: module.Left,
-			Name:     "control",
-			Label:    "Control",
-			Source:   true,
-			Message:  TickerControl{},
+			Position:      module.Left,
+			Name:          "control",
+			Label:         "Control",
+			Source:        true,
+			Configuration: TickerControl{},
 		})
 	}
 	return ports
