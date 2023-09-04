@@ -51,6 +51,7 @@ func (t *Delay) Handle(ctx context.Context, handler module.Handler, port string,
 	if in.Delay <= 0 {
 		return fmt.Errorf("invalid delay")
 	}
+
 	go func() {
 		time.Sleep(time.Millisecond * time.Duration(in.Delay))
 		_ = handler(DelayOutPort, DelayOutMessage{

@@ -3,6 +3,7 @@ package slack
 import (
 	"context"
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/slack-go/slack"
 	"github.com/tiny-systems/module/module"
 	"github.com/tiny-systems/module/registry"
@@ -84,6 +85,8 @@ func (t *ChannelSender) Handle(ctx context.Context, responseHandler module.Handl
 	_, _, _, err := client.SendMessageContext(ctx, in.Message.ChannelID, slack.MsgOptionText(in.Message.Text, true))
 
 	if err != nil {
+		spew.Dump("SEND SLACK ERROR", err)
+
 		if t.settings.EnableErrorPort {
 			return responseHandler(PortError, SendSlackChannelError{
 				Context: in.Context,
