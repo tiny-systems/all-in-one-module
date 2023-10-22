@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	_ "github.com/tiny-systems/main/components/array"
@@ -41,6 +41,6 @@ func main() {
 
 	cli.RegisterCommands(rootCmd)
 	if err := rootCmd.ExecuteContext(ctx); err != nil {
-		log.Fatal().Err(err).Msg("command execute")
+		fmt.Printf("command execute error: %v\n", err)
 	}
 }
