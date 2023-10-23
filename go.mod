@@ -18,7 +18,7 @@ require (
 	github.com/spf13/viper v1.15.0
 	github.com/spyzhov/ajson v0.9.0
 	github.com/swaggest/jsonschema-go v0.3.62
-	github.com/tiny-systems/module v0.1.13
+	github.com/tiny-systems/module v0.1.14
 	github.com/wneessen/go-mail v0.3.9
 	golang.org/x/oauth2 v0.13.0
 	google.golang.org/api v0.126.0
@@ -131,3 +131,5 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.3.0 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
+
+//replace github.com/tiny-systems/module => ../module
