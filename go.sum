@@ -374,6 +374,12 @@ github.com/tiny-systems/module v0.1.13 h1:rYdxJLaT5GLnAiVGszXflPPpUFFKOqo/P01GQv
 github.com/tiny-systems/module v0.1.13/go.mod h1:lJSDw7GCbjp+Tqv7vNKPNhQBB5Gru/ulkiFpNx1YFII=
 github.com/tiny-systems/module v0.1.14 h1:jtixj6B2nmkjLRbCiYqgEwBQD0T5WDzj/fSOfycUh7o=
 github.com/tiny-systems/module v0.1.14/go.mod h1:lJSDw7GCbjp+Tqv7vNKPNhQBB5Gru/ulkiFpNx1YFII=
+github.com/tiny-systems/module v0.1.15 h1:trWe0K/PqDmn2A+ngFOlA5leamvJaVka01k9r86EerM=
+github.com/tiny-systems/module v0.1.15/go.mod h1:lJSDw7GCbjp+Tqv7vNKPNhQBB5Gru/ulkiFpNx1YFII=
+github.com/tiny-systems/module v0.1.16 h1:rBXo8lPknpNR+ZYnFKq2tV72nJJrThP1lEBbLYBloPU=
+github.com/tiny-systems/module v0.1.16/go.mod h1:lJSDw7GCbjp+Tqv7vNKPNhQBB5Gru/ulkiFpNx1YFII=
+github.com/tiny-systems/module v0.1.17 h1:GuHzBLPDZQlEbHbWasAuzUT5z92WgiYqtwoAj2L8y9w=
+github.com/tiny-systems/module v0.1.17/go.mod h1:lJSDw7GCbjp+Tqv7vNKPNhQBB5Gru/ulkiFpNx1YFII=
 github.com/tiny-systems/platform-api v0.0.7 h1:6c5pf6SP1pkC58OqKd3tCz7Lbc1p3bqIQLiCI/jSSMA=
 github.com/tiny-systems/platform-api v0.0.7/go.mod h1:lQlZkBcEpwtG2nA/48zKpcEKxIMSZP/dqcd8DGpnJ40=
 github.com/ugorji/go/codec v1.2.11 h1:BMaWp1Bb6fHwEtbplGBGJ498wD+LKlNSl25MjdZY4dU=
