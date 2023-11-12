@@ -44,7 +44,7 @@ type Server struct {
 	contexts         *ttlmap.TTLMap
 	addressGetter    module.ListenAddressGetter
 	publicListenAddr string
-	listenAddr       string
+	listenPort       int
 }
 
 func (h *Server) HTTPService(getter module.ListenAddressGetter) {
@@ -52,10 +52,8 @@ func (h *Server) HTTPService(getter module.ListenAddressGetter) {
 }
 
 type ServerSettings struct {
-	ListenAddr               string `json:"listenAddr" required:"true" title:"Listen Address"`
-	WriteTimeout             int    `json:"writeTimeout" required:"true" title:"Write Timeout" description:"Covers the time from the end of the request header read to the end of the response write"`
-	EnableControlPort        bool   `json:"enableControlPort" required:"true" title:"Enable control port" description:"Control port allows control server externally"`
-	hideListenAddressSetting bool   `json:"-"`
+	WriteTimeout      int  `json:"writeTimeout" required:"true" title:"Write Timeout" description:"Covers the time from the end of the request header read to the end of the response write"`
+	EnableControlPort bool `json:"enableControlPort" required:"true" title:"Enable control port" description:"Control port allows control server externally"`
 }
 
 type ServerRequest struct {
@@ -108,7 +106,6 @@ func (h *Server) Instance() module.Component {
 	return &Server{
 		publicListenAddr: "http://localhost:1234",
 		settings: ServerSettings{
-			ListenAddr:   "localhost:1234",
 			WriteTimeout: 10,
 		},
 	}
@@ -121,13 +118,6 @@ func (h *Server) GetInfo() module.ComponentInfo {
 		Info:        "Serves HTTP requests. Each HTTP requests creates its representing message on a Request port. To display HTTP response incoming message should find its way to the Response port. Other way HTTP request timeout error will be shown.",
 		Tags:        []string{"HTTP", "Server"},
 	}
-}
-
-func (s ServerSettings) PrepareJSONSchema(schema *jsonschema.Schema) error {
-	if s.hideListenAddressSetting {
-		delete(schema.Properties, "listenAddr")
-	}
-	return nil
 }
 
 func (h *Server) Emit(ctx context.Context, handler module.Handler) error {
@@ -232,6 +222,7 @@ func (h *Server) Emit(ctx context.Context, handler module.Handler) error {
 			}
 		}
 	})
+
 	go func() {
 		<-ctx.Done()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), time.Second*5)
@@ -241,33 +232,37 @@ func (h *Server) Emit(ctx context.Context, handler module.Handler) error {
 	e.Server.WriteTimeout = time.Duration(h.settings.WriteTimeout) * time.Second
 
 	var (
-		ch         = make(chan struct{}, 0)
-		listenAddr = h.settings.ListenAddr
-		err        error
+		ch      = make(chan struct{}, 0)
+		upgrade module.AddressUpgrade
+		err     error
 	)
 
 	if h.addressGetter != nil {
-		listenAddr = ":0"
+		h.listenPort, upgrade = h.addressGetter()
+	}
+
+	var listenAddr = ":0"
+
+	if h.listenPort > 0 {
+		listenAddr = fmt.Sprintf(":%d", h.listenPort)
 	}
 
 	go func() {
-		defer close(ch)
 		err = e.Start(listenAddr)
 	}()
 
 	go func() {
+		defer close(ch)
 		time.Sleep(time.Second)
 		if e.Listener != nil {
 			if tcpAddr, ok := e.Listener.Addr().(*net.TCPAddr); ok {
-				h.publicListenAddr = fmt.Sprintf("http://localhost:%d", tcpAddr.Port)
-				if h.addressGetter != nil {
-					// exchange with public url
-					if publicAddr, err := h.addressGetter(tcpAddr.Port); err == nil {
-						h.publicListenAddr = publicAddr
-					}
+				h.publicListenAddr, err = upgrade(tcpAddr.Port)
+				if err != nil {
+					h.publicListenAddr = fmt.Sprintf("ERROR: %s", err.Error())
 				}
 			}
 		}
+		<-ctx.Done()
 	}()
 
 	<-ch
@@ -279,11 +274,6 @@ func (h *Server) Handle(ctx context.Context, handler module.Handler, port string
 		in, ok := msg.(ServerSettings)
 		if !ok {
 			return fmt.Errorf("invalid settings")
-		}
-		if h.addressGetter != nil {
-			in.hideListenAddressSetting = true
-		} else {
-			h.publicListenAddr = fmt.Sprintf("http://%s", in.ListenAddr)
 		}
 		h.settings = in
 		return nil
