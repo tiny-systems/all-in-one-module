@@ -104,7 +104,7 @@ func (c ContentType) JSONSchema() (jsonschema.Schema, error) {
 
 func (h *Server) Instance() module.Component {
 	return &Server{
-		publicListenAddr: "http://localhost:1234",
+		publicListenAddr: "",
 		settings: ServerSettings{
 			WriteTimeout: 10,
 		},
@@ -257,6 +257,9 @@ func (h *Server) Emit(ctx context.Context, handler module.Handler) error {
 		if e.Listener != nil {
 			if tcpAddr, ok := e.Listener.Addr().(*net.TCPAddr); ok {
 				h.publicListenAddr, err = upgrade(tcpAddr.Port)
+				if !strings.HasPrefix(h.publicListenAddr, "https://") {
+					h.publicListenAddr = fmt.Sprintf("https://%s", h.publicListenAddr)
+				}
 				if err != nil {
 					h.publicListenAddr = fmt.Sprintf("ERROR: %s", err.Error())
 				}
