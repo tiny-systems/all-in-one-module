@@ -124,8 +124,8 @@ func (h *Server) Emit(ctx context.Context, handler module.Handler) error {
 	h.contexts = ttlmap.New(ctx, h.settings.WriteTimeout)
 	e := echo.New()
 
-	//	e.HideBanner = true
-	//	e.HidePort = true
+	e.HideBanner = true
+	e.HidePort = true
 
 	e.Any("*", func(c echo.Context) error {
 		id, err := uuid.NewUUID()
