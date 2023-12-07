@@ -2,8 +2,12 @@ package http
 
 import (
 	"context"
+	"fmt"
 	"github.com/tiny-systems/module/module"
 	"github.com/tiny-systems/module/registry"
+	"io"
+	"net/http"
+	url2 "net/url"
 )
 
 const ClientComponent = "http_client"
@@ -22,14 +26,21 @@ type ClientRequest struct {
 }
 
 type Request struct {
-	Method  string            `json:"method" required:"true" title:"Method" enum:"get,post,patch,put,delete" enumTitles:"GET,POST,PATCH,PUT,DELETE" colSpan:"col-span-3" propertyOrder:"1"`
+	Method  string            `json:"method" required:"true" title:"Method" enum:"GET,POST,PATCH,PUT,DELETE" enumTitles:"GET,POST,PATCH,PUT,DELETE" colSpan:"col-span-3" propertyOrder:"1"`
 	URL     string            `json:"url" required:"true" title:"URL" format:"uri" propertyOrder:"2"`
 	Headers []Header          `json:"headers" required:"true" title:"Headers" propertyOrder:"3"`
 	Body    ClientRequestBody `json:"body" configurable:"true" title:"Request Body" propertyOrder:"4"`
 }
 
+type Response struct {
+	Status     string      `json:"status"`
+	StatusCode int         `json:"statusCode"`
+	Body       interface{} `json:"body"`
+}
+
 type ClientResponse struct {
-	Request ClientRequest `json:"request"`
+	Request  ClientRequest `json:"request"`
+	Response string        `json:"response"`
 }
 
 type Client struct {
@@ -49,7 +60,42 @@ func (h Client) GetInfo() module.ComponentInfo {
 }
 
 func (h Client) Handle(ctx context.Context, handler module.Handler, port string, message interface{}) error {
-	return nil
+
+	if port != "request" {
+		return fmt.Errorf("invalid port")
+	}
+
+	in, ok := message.(ClientRequest)
+	if !ok {
+		return fmt.Errorf("invalid message")
+	}
+
+	url, err := url2.Parse(in.URL)
+	if err != nil {
+		return err
+	}
+
+	c := http.Client{}
+
+	r := &http.Request{
+		URL:    url,
+		Method: in.Method,
+	}
+
+	resp, err := c.Do(r)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	return handler("response", ClientResponse{
+		Response: string(b),
+		Request:  in,
+	})
 }
 
 func (h Client) Ports() []module.NodePort {
@@ -62,7 +108,7 @@ func (h Client) Ports() []module.NodePort {
 				Request: Request{
 					Method:  "get",
 					Headers: make([]Header, 0),
-					URL:     "https://example.com",
+					URL:     "http://example.com",
 				},
 			},
 			Position: module.Left,
