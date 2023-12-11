@@ -7,7 +7,7 @@ import (
 	"github.com/tiny-systems/module/registry"
 	"io"
 	"net/http"
-	url2 "net/url"
+	"time"
 )
 
 const ClientComponent = "http_client"
@@ -60,7 +60,6 @@ func (h Client) GetInfo() module.ComponentInfo {
 }
 
 func (h Client) Handle(ctx context.Context, handler module.Handler, port string, message interface{}) error {
-
 	if port != "request" {
 		return fmt.Errorf("invalid port")
 	}
@@ -70,17 +69,15 @@ func (h Client) Handle(ctx context.Context, handler module.Handler, port string,
 		return fmt.Errorf("invalid message")
 	}
 
-	url, err := url2.Parse(in.URL)
+	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
+	defer cancel()
+
+	r, err := http.NewRequestWithContext(ctx, in.Method, in.URL, nil)
 	if err != nil {
 		return err
 	}
 
 	c := http.Client{}
-
-	r := &http.Request{
-		URL:    url,
-		Method: in.Method,
-	}
 
 	resp, err := c.Do(r)
 	if err != nil {
@@ -106,7 +103,7 @@ func (h Client) Ports() []module.NodePort {
 			Source: true,
 			Configuration: ClientRequest{
 				Request: Request{
-					Method:  "get",
+					Method:  http.MethodGet,
 					Headers: make([]Header, 0),
 					URL:     "http://example.com",
 				},

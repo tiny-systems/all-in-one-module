@@ -36,7 +36,6 @@ const (
 	ServerResponsePort        = "response"
 	ServerRequestPort         = "request"
 	ServerControlPort         = "control"
-	ServerStatusPort          = "status"
 )
 
 type Server struct {
@@ -52,7 +51,8 @@ func (h *Server) HTTPService(getter module.ListenAddressGetter) {
 }
 
 type ServerSettings struct {
-	WriteTimeout      int  `json:"writeTimeout" required:"true" title:"Write Timeout" description:"Covers the time from the end of the request header read to the end of the response write"`
+	ReadTimeout       int  `json:"readTimeout" required:"true" title:"Read Timeout" description:"ReadTimeout is the maximum duration for reading the entire request, including the body. A zero or negative value means there will be no timeout."`
+	WriteTimeout      int  `json:"writeTimeout" required:"true" title:"Write Timeout" description:"WriteTimeout is the maximum duration before timing out writes of the response. It is reset whenever a new request's header is read."`
 	EnableControlPort bool `json:"enableControlPort" required:"true" title:"Enable control port" description:"Control port allows control server externally"`
 }
 
@@ -107,6 +107,7 @@ func (h *Server) Instance() module.Component {
 		publicListenAddr: "",
 		settings: ServerSettings{
 			WriteTimeout: 10,
+			ReadTimeout:  60,
 		},
 	}
 }
@@ -121,11 +122,11 @@ func (h *Server) GetInfo() module.ComponentInfo {
 }
 
 func (h *Server) Emit(ctx context.Context, handler module.Handler) error {
-	h.contexts = ttlmap.New(ctx, h.settings.WriteTimeout)
+	h.contexts = ttlmap.New(ctx, h.settings.ReadTimeout+h.settings.ReadTimeout)
 	e := echo.New()
 
-	e.HideBanner = true
-	e.HidePort = true
+	e.HideBanner = false
+	e.HidePort = false
 
 	e.Any("*", func(c echo.Context) error {
 		id, err := uuid.NewUUID()
@@ -199,7 +200,7 @@ func (h *Server) Emit(ctx context.Context, handler module.Handler) error {
 
 		for {
 			select {
-			case <-time.Tick(time.Duration(h.settings.WriteTimeout) * time.Second):
+			case <-time.Tick(time.Duration(h.settings.ReadTimeout) * time.Second):
 				err = fmt.Errorf("response timeout")
 				c.Error(err)
 				return err
@@ -229,6 +230,8 @@ func (h *Server) Emit(ctx context.Context, handler module.Handler) error {
 		defer cancel()
 		_ = e.Shutdown(shutdownCtx)
 	}()
+
+	e.Server.ReadTimeout = time.Duration(h.settings.ReadTimeout) * time.Second
 	e.Server.WriteTimeout = time.Duration(h.settings.WriteTimeout) * time.Second
 
 	var (
