@@ -22,12 +22,12 @@ type RouteName struct {
 	Options []string
 }
 
-// MarshalJSON treat like a string
+// MarshalJSON treat like underlying Value string
 func (r *RouteName) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r.Value)
 }
 
-// UnmarshalJSON treat like a string
+// UnmarshalJSON treat like underlying Value string
 func (r *RouteName) UnmarshalJSON(data []byte) error {
 	return json.Unmarshal(data, &r.Value)
 }
