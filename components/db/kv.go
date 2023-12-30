@@ -53,7 +53,7 @@ type KeyValueStore struct {
 
 type KeyValueQueryRequest struct {
 	Context KeyValueQueryRequestContext `json:"context" configurable:"true" propertyOrder:"1" title:"Context"`
-	Query   string                      `json:"query,omitempty" required:"true" title:"Query" propertyOrder:"2" default:"$.documentProperty == 1"`
+	Query   string                      `json:"query,omitempty" required:"true" title:"Query" propertyOrder:"2"`
 }
 
 type KeyValueQueryResult struct {
@@ -190,11 +190,13 @@ func (k *KeyValueStore) Handle(ctx context.Context, output module.Handler, port 
 func (k *KeyValueStore) Ports() []module.NodePort {
 	ports := []module.NodePort{
 		{
-			Name:          PortQuery,
-			Label:         "Query",
-			Source:        true,
-			Configuration: KeyValueQueryRequest{},
-			Position:      module.Left,
+			Name:   PortQuery,
+			Label:  "Query",
+			Source: true,
+			Configuration: KeyValueQueryRequest{
+				Query: "$.documentProperty == 1",
+			},
+			Position: module.Left,
 		},
 
 		{

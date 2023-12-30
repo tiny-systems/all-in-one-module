@@ -60,7 +60,6 @@ func (s *Scheduler) SetState(state []byte) error {
 }
 
 type Scheduler struct {
-	runCtx   context.Context
 	settings SchedulerSettings
 	tasks    cmap.ConcurrentMap[string, *task]
 }
@@ -81,12 +80,11 @@ func (s *Scheduler) GetInfo() module.ComponentInfo {
 }
 
 func (s *Scheduler) Emit(ctx context.Context, handle module.Handler) error {
-	s.runCtx = ctx
 	for _, k := range s.tasks.Keys() {
 		v, _ := s.tasks.Get(k)
-		go s.waitTask(v)
+		go s.waitTask(ctx, v)
 	}
-	<-s.runCtx.Done()
+	<-ctx.Done()
 	return ctx.Err()
 }
 
@@ -162,12 +160,12 @@ func (s *Scheduler) addOrUpdateTask(id string, start bool, duration time.Duratio
 	//}
 }
 
-func (s *Scheduler) waitTask(d *task) {
+func (s *Scheduler) waitTask(ctx context.Context, d *task) {
 	select {
 	case <-d.timer.C:
 		s.tasks.Remove(d.id)
 		d.call()
-	case <-s.runCtx.Done():
+	case <-ctx.Done():
 	}
 }
 
@@ -214,7 +212,7 @@ func (s *Scheduler) Ports() []module.NodePort {
 	return ports
 }
 
-func (s *Scheduler) debugTasks() {
+func (s *Scheduler) debugTasks(ctx context.Context) {
 
 	ticker := time.NewTicker(time.Second * 5)
 	for {
@@ -224,7 +222,7 @@ func (s *Scheduler) debugTasks() {
 			for _, k := range s.tasks.Keys() {
 				fmt.Println("job", k)
 			}
-		case <-s.runCtx.Done():
+		case <-ctx.Done():
 			fmt.Println("exiting from debug")
 			return
 		}
