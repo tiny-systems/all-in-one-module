@@ -51,7 +51,7 @@ type Condition struct {
 }
 
 type RouterSettings struct {
-	Routes []string `json:"routes,omitempty" required:"true" default:"[A,B]" title:"Routes" minItems:"1" uniqueItems:"true"`
+	Routes []string `json:"routes,omitempty" required:"true" title:"Routes" minItems:"1" uniqueItems:"true"`
 }
 
 type RouterContext any

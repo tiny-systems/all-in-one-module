@@ -232,7 +232,6 @@ func (s *Scheduler) debugTasks(ctx context.Context) {
 var scheduler = (*Scheduler)(nil)
 
 var _ module.Component = scheduler
-var _ module.Emitter = scheduler
 var _ module.StatefulComponent = scheduler
 
 func init() {

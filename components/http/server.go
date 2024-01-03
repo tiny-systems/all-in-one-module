@@ -17,6 +17,7 @@ import (
 	"net/url"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -35,15 +36,25 @@ const (
 	ServerComponent    string = "http_server"
 	ServerResponsePort        = "response"
 	ServerRequestPort         = "request"
+	ServerStartPort           = "start"
 	ServerControlPort         = "control"
+	ServerStopPort            = "stop"
+	ServerStatusPort          = "status"
 )
 
 type Server struct {
-	settings         ServerSettings
-	contexts         *ttlmap.TTLMap
-	addressGetter    module.ListenAddressGetter
-	publicListenAddr string
-	listenPort       int
+	settings     ServerSettings
+	settingsLock *sync.Mutex
+
+	contexts      *ttlmap.TTLMap
+	addressGetter module.ListenAddressGetter
+
+	publicListenAddrLock *sync.Mutex
+	publicListenAddr     []string
+	//listenPort           int
+
+	cancelFunc     context.CancelFunc
+	cancelFuncLock *sync.Mutex
 }
 
 func (h *Server) HTTPService(getter module.ListenAddressGetter) {
@@ -51,29 +62,45 @@ func (h *Server) HTTPService(getter module.ListenAddressGetter) {
 }
 
 type ServerSettings struct {
-	ReadTimeout       int  `json:"readTimeout" required:"true" title:"Read Timeout" description:"ReadTimeout is the maximum duration for reading the entire request, including the body. A zero or negative value means there will be no timeout."`
-	WriteTimeout      int  `json:"writeTimeout" required:"true" title:"Write Timeout" description:"WriteTimeout is the maximum duration before timing out writes of the response. It is reset whenever a new request's header is read."`
-	EnableControlPort bool `json:"enableControlPort" required:"true" title:"Enable control port" description:"Control port allows control server externally"`
+	EnableStatusPort bool `json:"enableStatusPort" required:"true" title:"Enable status port" description:"Status port notifies when server is up or down"`
+	EnableStopPort   bool `json:"enableStopPort" required:"true" title:"Enable stop port" description:"Stop port allows you to stop the server"`
+}
+
+type ServerStartContext any
+
+type ServerStart struct {
+	Context      ServerStartContext `json:"context" configurable:"true" title:"Context" propertyOrder:"1"`
+	AutoHostName bool               `json:"autoHostName" title:"Automatically generate hostname" description:"Use cluster auto subdomain setup if any." propertyOrder:"2"`
+	Hostnames    []string           `json:"hostnames" title:"Hostnames" required:"false" description:"List of virtual host this server should be bound to." propertyOrder:"3"` //requiredWhen:"['kind', 'equal', 'enum 1']"
+	ReadTimeout  int                `json:"readTimeout" required:"true" title:"Read Timeout" description:"Read timeout is the maximum duration for reading the entire request, including the body. A zero or negative value means there will be no timeout." propertyOrder:"4"`
+	WriteTimeout int                `json:"writeTimeout" required:"true" title:"Write Timeout" description:"Write timeout is the maximum duration before timing out writes of the response. It is reset whenever a new request's header is read." propertyOrder:"5"`
 }
 
 type ServerRequest struct {
-	RequestID     string     `json:"requestID" required:"true"`
-	RequestURI    string     `json:"requestURI" required:"true"`
-	RequestParams url.Values `json:"requestParams" required:"true"`
-	Host          string     `json:"host" required:"true"`
-	Method        string     `json:"method" required:"true" title:"Method" enum:"GET,POST,PATCH,PUT,DELETE" enumTitles:"GET,POST,PATCH,PUT,DELETE"`
-	RealIP        string     `json:"realIP"`
-	Headers       []Header   `json:"headers,omitempty"`
-	Body          any        `json:"body"`
-	Scheme        string     `json:"scheme"`
+	Context       ServerStartContext `json:"context"`
+	RequestID     string             `json:"requestID" required:"true"`
+	RequestURI    string             `json:"requestURI" required:"true"`
+	RequestParams url.Values         `json:"requestParams" required:"true"`
+	Host          string             `json:"host" required:"true"`
+	Method        string             `json:"method" required:"true" title:"Method" enum:"GET,POST,PATCH,PUT,DELETE" enumTitles:"GET,POST,PATCH,PUT,DELETE"`
+	RealIP        string             `json:"realIP"`
+	Headers       []Header           `json:"headers,omitempty"`
+	Body          any                `json:"body"`
+	Scheme        string             `json:"scheme"`
 }
 
-type ServerControlRequest struct {
-	Start bool `json:"start" required:"true" title:"Server state"`
+type ServerStop struct {
+}
+
+type ServerError struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
 }
 
 type ServerStatus struct {
-	ListenAddr string `json:"listenAddr" readonly:"true" title:"Listen Address"`
+	Context    ServerStartContext `json:"context" title:"Context" propertyOrder:"1"`
+	ListenAddr []string           `json:"listenAddr" title:"Listen Address" readonly:"true" propertyOrder:"2"`
+	Error      *ServerError       `json:"error" title:"Error" readonly:"true" propertyOrder:"3"`
 }
 
 type ServerResponseBody any
@@ -104,10 +131,13 @@ func (c ContentType) JSONSchema() (jsonschema.Schema, error) {
 
 func (h *Server) Instance() module.Component {
 	return &Server{
-		publicListenAddr: "",
+		publicListenAddr:     []string{},
+		publicListenAddrLock: &sync.Mutex{},
+		cancelFuncLock:       &sync.Mutex{},
+		settingsLock:         &sync.Mutex{},
 		settings: ServerSettings{
-			WriteTimeout: 10,
-			ReadTimeout:  60,
+			EnableStatusPort: false,
+			EnableStopPort:   false,
 		},
 	}
 }
@@ -121,8 +151,25 @@ func (h *Server) GetInfo() module.ComponentInfo {
 	}
 }
 
-func (h *Server) Emit(ctx context.Context, handler module.Handler) error {
-	h.contexts = ttlmap.New(ctx, h.settings.ReadTimeout+h.settings.ReadTimeout)
+func (h *Server) stop(ctx context.Context, msg ServerStop, handler module.Handler) error {
+	h.cancelFuncLock.Lock()
+	defer h.cancelFuncLock.Unlock()
+	if h.cancelFunc != nil {
+		h.cancelFunc()
+	}
+	return nil
+}
+
+func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Handler) error {
+
+	fmt.Println("START", msg)
+	ctx, cancel := context.WithCancel(ctx)
+
+	h.cancelFuncLock.Lock()
+	h.cancelFunc = cancel
+	h.cancelFuncLock.Unlock()
+
+	h.contexts = ttlmap.New(ctx, msg.ReadTimeout+msg.ReadTimeout)
 	e := echo.New()
 
 	e.HideBanner = false
@@ -200,7 +247,7 @@ func (h *Server) Emit(ctx context.Context, handler module.Handler) error {
 
 		for {
 			select {
-			case <-time.Tick(time.Duration(h.settings.ReadTimeout) * time.Second):
+			case <-time.Tick(time.Duration(msg.ReadTimeout) * time.Second):
 				err = fmt.Errorf("response timeout")
 				c.Error(err)
 				return err
@@ -231,23 +278,24 @@ func (h *Server) Emit(ctx context.Context, handler module.Handler) error {
 		_ = e.Shutdown(shutdownCtx)
 	}()
 
-	e.Server.ReadTimeout = time.Duration(h.settings.ReadTimeout) * time.Second
-	e.Server.WriteTimeout = time.Duration(h.settings.WriteTimeout) * time.Second
+	e.Server.ReadTimeout = time.Duration(msg.ReadTimeout) * time.Second
+	e.Server.WriteTimeout = time.Duration(msg.WriteTimeout) * time.Second
 
 	var (
-		ch      = make(chan struct{}, 0)
-		upgrade module.AddressUpgrade
-		err     error
+		ch         = make(chan struct{}, 0)
+		upgrade    module.AddressUpgrade
+		err        error
+		listenPort int
 	)
 
 	if h.addressGetter != nil {
-		h.listenPort, upgrade = h.addressGetter()
+		listenPort, upgrade = h.addressGetter()
 	}
 
 	var listenAddr = ":0"
 
-	if h.listenPort > 0 {
-		listenAddr = fmt.Sprintf(":%d", h.listenPort)
+	if listenPort > 0 {
+		listenAddr = fmt.Sprintf(":%d", listenPort)
 	}
 
 	go func() {
@@ -259,13 +307,12 @@ func (h *Server) Emit(ctx context.Context, handler module.Handler) error {
 		time.Sleep(time.Second)
 		if e.Listener != nil {
 			if tcpAddr, ok := e.Listener.Addr().(*net.TCPAddr); ok {
-				h.publicListenAddr, err = upgrade(tcpAddr.Port)
-				if !strings.HasPrefix(h.publicListenAddr, "https://") {
-					h.publicListenAddr = fmt.Sprintf("https://%s", h.publicListenAddr)
-				}
+				hostnames, err := upgrade(ctx, msg.AutoHostName, msg.Hostnames, tcpAddr.Port)
 				if err != nil {
-					h.publicListenAddr = fmt.Sprintf("ERROR: %s", err.Error())
+					h.setPublicListerAddr([]string{fmt.Sprintf("ERROR: %s", err.Error())})
+					return
 				}
+				h.setPublicListerAddr(hostnames)
 			}
 		}
 		<-ctx.Done()
@@ -275,52 +322,76 @@ func (h *Server) Emit(ctx context.Context, handler module.Handler) error {
 	return err
 }
 
+func (h *Server) setPublicListerAddr(addr []string) {
+	h.publicListenAddrLock.Lock()
+	defer h.publicListenAddrLock.Unlock()
+	h.publicListenAddr = addr
+}
+
+func (h *Server) getPublicListerAddr() []string {
+	h.publicListenAddrLock.Lock()
+	defer h.publicListenAddrLock.Unlock()
+	return h.publicListenAddr
+}
+
 func (h *Server) Handle(ctx context.Context, handler module.Handler, port string, msg interface{}) error {
-	if port == module.SettingsPort {
+
+	switch port {
+	case module.SettingsPort:
 		in, ok := msg.(ServerSettings)
 		if !ok {
-			return fmt.Errorf("invalid settings")
+			return fmt.Errorf("invalid settings message")
 		}
+
+		h.settingsLock.Lock()
+		defer h.settingsLock.Unlock()
+
 		h.settings = in
 		return nil
-	}
 
-	if port == ServerControlPort {
+	case ServerStartPort:
+		in, ok := msg.(ServerStart)
+		if !ok {
+			return fmt.Errorf("invalid start message")
+		}
+		return h.start(ctx, in, handler)
+
+	case ServerStopPort:
+		in, ok := msg.(ServerStop)
+		if !ok {
+			return fmt.Errorf("invalid stop message")
+		}
+		return h.stop(ctx, in, handler)
+
+	case ServerResponsePort:
+		in, ok := msg.(ServerResponse)
+		if !ok {
+			return fmt.Errorf("invalid response message")
+		}
+
+		if h.contexts == nil {
+			return fmt.Errorf("unknown request ID %s", in.RequestID)
+		}
+
+		ch := h.contexts.Get(in.RequestID)
+		if ch == nil {
+			return fmt.Errorf("context not found %s", in.RequestID)
+		}
+
+		if respChannel, ok := ch.(chan ServerResponse); ok {
+			respChannel <- in
+		}
 		return nil
 	}
-
-	in, ok := msg.(ServerResponse)
-	if !ok {
-		return fmt.Errorf("invalid response message")
-	}
-
-	if h.contexts == nil {
-		return fmt.Errorf("unknown request ID %s", in.RequestID)
-	}
-
-	ch := h.contexts.Get(in.RequestID)
-	if ch == nil {
-		return fmt.Errorf("context not found %s", in.RequestID)
-	}
-
-	if respChannel, ok := ch.(chan ServerResponse); ok {
-		respChannel <- in
-	}
-	return nil
+	return fmt.Errorf("port %s is not supported", port)
 }
 
 func (h *Server) Ports() []module.NodePort {
 
+	h.settingsLock.Lock()
+	defer h.settingsLock.Unlock()
+
 	ports := []module.NodePort{
-		{
-			Name:   module.StatusPort,
-			Label:  "Status",
-			Source: true,
-			Status: true,
-			Configuration: ServerStatus{
-				ListenAddr: h.publicListenAddr,
-			},
-		},
 		{
 			Name:          module.SettingsPort,
 			Label:         "Settings",
@@ -343,23 +414,60 @@ func (h *Server) Ports() []module.NodePort {
 				StatusCode: 200,
 			},
 		},
+		{
+			Name:     ServerStartPort,
+			Label:    "Start",
+			Source:   true,
+			Position: module.Left,
+			Configuration: ServerStart{
+				WriteTimeout: 10,
+				ReadTimeout:  60,
+				AutoHostName: true,
+			},
+		},
+		{
+			Name:          ServerControlPort,
+			Label:         "Status",
+			Source:        true,
+			Control:       true,
+			Configuration: h.getStatus(),
+		},
 	}
 
-	if h.settings.EnableControlPort {
+	// programmatically stop server
+	if h.settings.EnableStopPort {
 		ports = append(ports, module.NodePort{
 			Position:      module.Left,
-			Name:          ServerControlPort,
-			Label:         "Control",
+			Name:          ServerStopPort,
+			Label:         "Stop",
 			Source:        true,
-			Configuration: ServerControlRequest{},
+			Configuration: ServerStop{},
+		})
+	}
+
+	// programmatically use status in flows
+	if h.settings.EnableStatusPort {
+		ports = append(ports, module.NodePort{
+			Position:      module.Bottom,
+			Name:          ServerStatusPort,
+			Label:         "Status",
+			Configuration: h.getStatus(),
 		})
 	}
 
 	return ports
 }
 
+func (h *Server) getStatus() ServerStatus {
+	return ServerStatus{
+		ListenAddr: h.getPublicListerAddr(),
+		Error:      nil,
+	}
+}
+
 var _ module.Component = (*Server)(nil)
-var _ module.Emitter = (*Server)(nil)
+
+// var _ module.Emitter = (*Server)(nil)
 var _ module.HTTPService = (*Server)(nil)
 
 func init() {

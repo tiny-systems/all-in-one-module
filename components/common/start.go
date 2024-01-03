@@ -8,8 +8,9 @@ import (
 )
 
 const (
-	StarterComponent        = "start"
-	StarterOutPort   string = "out"
+	StartComponent          = "start"
+	StartOutPort     string = "out"
+	StartControlPort string = "control"
 )
 
 type StartContext any
@@ -22,6 +23,11 @@ type Start struct {
 	settings StartSettings
 }
 
+type StartControl struct {
+	Send    bool         `json:"send" format:"button" title:"Send" required:"true" propertyOrder:"1"`
+	Context StartContext `json:"context"`
+}
+
 func (t *Start) Instance() module.Component {
 	return &Start{
 		settings: StartSettings{},
@@ -30,21 +36,21 @@ func (t *Start) Instance() module.Component {
 
 func (t *Start) GetInfo() module.ComponentInfo {
 	return module.ComponentInfo{
-		Name:        StarterComponent,
+		Name:        StartComponent,
 		Description: "Start",
 		Info:        "Sends any message when flow starts",
 		Tags:        []string{"SDK"},
 	}
 }
 
-func (t *Start) Emit(ctx context.Context, handle module.Handler) error {
-	handle(StarterOutPort, t.settings.Context)
-	<-ctx.Done()
-	return nil
-}
+func (t *Start) Handle(ctx context.Context, handle module.Handler, port string, msg interface{}) error {
 
-func (t *Start) Handle(ctx context.Context, handler module.Handler, port string, msg interface{}) error {
-	if port == module.SettingsPort {
+	switch port {
+
+	case StartControlPort:
+		_ = handle(StartOutPort, t.settings.Context)
+
+	case module.SettingsPort:
 		in, ok := msg.(StartSettings)
 		if !ok {
 			return fmt.Errorf("invalid settings")
@@ -61,19 +67,26 @@ func (t *Start) Ports() []module.NodePort {
 			Label:         "Settings",
 			Source:        true,
 			Settings:      true,
-			Configuration: StartSettings{},
+			Configuration: t.settings,
 		},
 		{
-			Name:          StarterOutPort,
+			Name:          StartOutPort,
 			Label:         "Out",
 			Source:        false,
 			Position:      module.Right,
 			Configuration: new(StartContext),
 		},
+		{
+			Name:    StartControlPort,
+			Label:   "Control",
+			Control: true,
+			Configuration: StartControl{
+				Context: t.settings.Context,
+			},
+		},
 	}
 }
 
-var _ module.Emitter = (*Start)(nil)
 var _ module.Component = (*Start)(nil)
 
 func init() {

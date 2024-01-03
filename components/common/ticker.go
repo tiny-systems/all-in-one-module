@@ -10,8 +10,9 @@ import (
 )
 
 const (
-	TickerComponent        = "ticker"
-	TickerOutPort   string = "out"
+	TickerComponent         = "ticker"
+	TickerOutPort    string = "out"
+	TickerStatusPort string = "status"
 )
 
 type TickerContext any
@@ -88,10 +89,10 @@ func (t *Ticker) Handle(ctx context.Context, handler module.Handler, port string
 func (t *Ticker) Ports() []module.NodePort {
 	ports := []module.NodePort{
 		{
-			Name:   module.StatusPort,
-			Label:  "Status",
-			Source: true,
-			Status: true,
+			Name:    TickerStatusPort,
+			Label:   "Status",
+			Source:  true,
+			Control: true,
 			Configuration: TickerStatus{
 				Status: fmt.Sprintf("All good: %d", t.counter),
 			},
@@ -126,7 +127,6 @@ func (t *Ticker) Ports() []module.NodePort {
 }
 
 var _ module.Component = (*Ticker)(nil)
-var _ module.Emitter = (*Ticker)(nil)
 
 func init() {
 	registry.Register(&Ticker{})

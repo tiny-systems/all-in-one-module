@@ -21,7 +21,7 @@ type GetAuthUrlInMessage struct {
 }
 
 type GetAuthUrlOutMessage struct {
-	Context GetAuthUrlInContext `json:"context""`
+	Context GetAuthUrlInContext `json:"context"`
 	AuthUrl string              `json:"authUrl" format:"uri"`
 }
 
