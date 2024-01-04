@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/clbanning/mxj/v2"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/swaggest/jsonschema-go"
@@ -335,6 +336,8 @@ func (h *Server) getPublicListerAddr() []string {
 }
 
 func (h *Server) Handle(ctx context.Context, handler module.Handler, port string, msg interface{}) error {
+
+	spew.Dump(port, msg)
 
 	switch port {
 	case module.SettingsPort:
