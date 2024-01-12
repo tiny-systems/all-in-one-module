@@ -46,9 +46,8 @@ func (t *Start) GetInfo() module.ComponentInfo {
 func (t *Start) Handle(ctx context.Context, handle module.Handler, port string, msg interface{}) error {
 
 	switch port {
-
 	case StartControlPort:
-		_ = handle(StartOutPort, t.settings.Context)
+		_ = handle(StartOutPort, msg)
 
 	case module.SettingsPort:
 		in, ok := msg.(StartSettings)

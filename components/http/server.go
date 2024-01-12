@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/clbanning/mxj/v2"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/swaggest/jsonschema-go"
@@ -12,6 +11,7 @@ import (
 	"github.com/tiny-systems/main/pkg/utils"
 	"github.com/tiny-systems/module/module"
 	"github.com/tiny-systems/module/registry"
+	"go.uber.org/atomic"
 	"io"
 	"net"
 	"net/http"
@@ -46,7 +46,9 @@ const (
 type Server struct {
 	settings     ServerSettings
 	settingsLock *sync.Mutex
-
+	//
+	lastStartSettings ServerStart
+	//
 	contexts      *ttlmap.TTLMap
 	addressGetter module.ListenAddressGetter
 
@@ -56,6 +58,28 @@ type Server struct {
 
 	cancelFunc     context.CancelFunc
 	cancelFuncLock *sync.Mutex
+
+	startErr *atomic.Error
+	//
+}
+
+func (h *Server) Instance() module.Component {
+	return &Server{
+		publicListenAddr:     []string{},
+		publicListenAddrLock: &sync.Mutex{},
+		cancelFuncLock:       &sync.Mutex{},
+		settingsLock:         &sync.Mutex{},
+		startErr:             &atomic.Error{},
+		lastStartSettings: ServerStart{
+			WriteTimeout: 10,
+			ReadTimeout:  60,
+			AutoHostName: true,
+		},
+		settings: ServerSettings{
+			EnableStatusPort: false,
+			EnableStopPort:   false,
+		},
+	}
 }
 
 func (h *Server) HTTPService(getter module.ListenAddressGetter) {
@@ -65,6 +89,7 @@ func (h *Server) HTTPService(getter module.ListenAddressGetter) {
 type ServerSettings struct {
 	EnableStatusPort bool `json:"enableStatusPort" required:"true" title:"Enable status port" description:"Status port notifies when server is up or down"`
 	EnableStopPort   bool `json:"enableStopPort" required:"true" title:"Enable stop port" description:"Stop port allows you to stop the server"`
+	EnableStartPort  bool `json:"enableStartPort" required:"true" title:"Enable start port" description:"Start port allows you to start the server"`
 }
 
 type ServerStartContext any
@@ -88,6 +113,17 @@ type ServerRequest struct {
 	Headers       []Header           `json:"headers,omitempty"`
 	Body          any                `json:"body"`
 	Scheme        string             `json:"scheme"`
+}
+
+type ServerStartControl struct {
+	Status string `json:"status" title:"Status" readonly:"true" propertyOrder:"2"`
+	Start  bool   `json:"start" format:"button" title:"Start" required:"true" description:"Start HTTP server" propertyOrder:"1"`
+}
+
+type ServerStopControl struct {
+	Stop       bool     `json:"stop" format:"button" title:"Stop" required:"true" description:"Stop HTTP server" propertyOrder:"1"`
+	Status     string   `json:"status" title:"Status" readonly:"true" propertyOrder:"2"`
+	ListenAddr []string `json:"listenAddr" title:"Listen Address" readonly:"true" propertyOrder:"3"`
 }
 
 type ServerStop struct {
@@ -130,19 +166,6 @@ func (c ContentType) JSONSchema() (jsonschema.Schema, error) {
 	return contentType, nil
 }
 
-func (h *Server) Instance() module.Component {
-	return &Server{
-		publicListenAddr:     []string{},
-		publicListenAddrLock: &sync.Mutex{},
-		cancelFuncLock:       &sync.Mutex{},
-		settingsLock:         &sync.Mutex{},
-		settings: ServerSettings{
-			EnableStatusPort: false,
-			EnableStopPort:   false,
-		},
-	}
-}
-
 func (h *Server) GetInfo() module.ComponentInfo {
 	return module.ComponentInfo{
 		Name:        ServerComponent,
@@ -152,23 +175,37 @@ func (h *Server) GetInfo() module.ComponentInfo {
 	}
 }
 
-func (h *Server) stop(ctx context.Context, msg ServerStop, handler module.Handler) error {
+func (h *Server) stop() error {
 	h.cancelFuncLock.Lock()
 	defer h.cancelFuncLock.Unlock()
 	if h.cancelFunc != nil {
 		h.cancelFunc()
+		time.Sleep(time.Second * 3)
 	}
 	return nil
 }
 
+func (h *Server) setCancelFunc(f func()) {
+	h.cancelFuncLock.Lock()
+	defer h.cancelFuncLock.Unlock()
+	h.cancelFunc = f
+}
+
+func (h *Server) isRunning() bool {
+	h.cancelFuncLock.Lock()
+	defer h.cancelFuncLock.Unlock()
+	return h.cancelFunc != nil
+}
+
 func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Handler) error {
 
-	fmt.Println("START", msg)
 	ctx, cancel := context.WithCancel(ctx)
+	h.setCancelFunc(cancel)
 
-	h.cancelFuncLock.Lock()
-	h.cancelFunc = cancel
-	h.cancelFuncLock.Unlock()
+	defer func() {
+		h.setCancelFunc(nil)
+		cancel()
+	}()
 
 	h.contexts = ttlmap.New(ctx, msg.ReadTimeout+msg.ReadTimeout)
 	e := echo.New()
@@ -272,20 +309,13 @@ func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Hand
 		}
 	})
 
-	go func() {
-		<-ctx.Done()
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-		defer cancel()
-		_ = e.Shutdown(shutdownCtx)
-	}()
-
 	e.Server.ReadTimeout = time.Duration(msg.ReadTimeout) * time.Second
 	e.Server.WriteTimeout = time.Duration(msg.WriteTimeout) * time.Second
 
 	var (
-		ch         = make(chan struct{}, 0)
-		upgrade    module.AddressUpgrade
-		err        error
+		ch      = make(chan struct{}, 0)
+		upgrade module.AddressUpgrade
+
 		listenPort int
 	)
 
@@ -300,7 +330,7 @@ func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Hand
 	}
 
 	go func() {
-		err = e.Start(listenAddr)
+		h.startErr.Store(e.Start(listenAddr))
 	}()
 
 	go func() {
@@ -310,17 +340,22 @@ func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Hand
 			if tcpAddr, ok := e.Listener.Addr().(*net.TCPAddr); ok {
 				hostnames, err := upgrade(ctx, msg.AutoHostName, msg.Hostnames, tcpAddr.Port)
 				if err != nil {
-					h.setPublicListerAddr([]string{fmt.Sprintf("ERROR: %s", err.Error())})
-					return
+					h.startErr.Store(err)
+					h.setPublicListerAddr([]string{fmt.Sprintf("http://localhost:%d", tcpAddr.Port)})
+				} else {
+					h.setPublicListerAddr(hostnames)
 				}
-				h.setPublicListerAddr(hostnames)
 			}
 		}
 		<-ctx.Done()
 	}()
-
 	<-ch
-	return err
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+	h.startErr.Store(e.Shutdown(shutdownCtx))
+
+	return h.startErr.Load()
 }
 
 func (h *Server) setPublicListerAddr(addr []string) {
@@ -336,10 +371,28 @@ func (h *Server) getPublicListerAddr() []string {
 }
 
 func (h *Server) Handle(ctx context.Context, handler module.Handler, port string, msg interface{}) error {
-
-	spew.Dump(port, msg)
-
 	switch port {
+	case ServerControlPort:
+		if msg == nil {
+			break
+		}
+
+		switch msg.(type) {
+		case ServerStartControl:
+			if h.stop() != nil {
+				return nil
+			}
+			go func() {
+				h.startErr.Store(h.start(ctx, h.lastStartSettings, handler))
+			}()
+			time.Sleep(time.Second * 3)
+			return h.startErr.Load()
+
+		case ServerStopControl:
+			err := h.stop()
+			return err
+		}
+
 	case module.SettingsPort:
 		in, ok := msg.(ServerSettings)
 		if !ok {
@@ -357,14 +410,24 @@ func (h *Server) Handle(ctx context.Context, handler module.Handler, port string
 		if !ok {
 			return fmt.Errorf("invalid start message")
 		}
-		return h.start(ctx, in, handler)
+
+		h.lastStartSettings = in
+
+		if h.stop() != nil {
+			return nil
+		}
+		go func() {
+			h.startErr.Store(h.start(ctx, in, handler))
+		}()
+		time.Sleep(time.Second * 3)
+
+		handler(module.RefreshPort, nil)
+		return h.startErr.Load()
 
 	case ServerStopPort:
-		in, ok := msg.(ServerStop)
-		if !ok {
-			return fmt.Errorf("invalid stop message")
-		}
-		return h.stop(ctx, in, handler)
+		err := h.stop()
+		handler(module.RefreshPort, nil)
+		return err
 
 	case ServerResponsePort:
 		in, ok := msg.(ServerResponse)
@@ -387,6 +450,18 @@ func (h *Server) Handle(ctx context.Context, handler module.Handler, port string
 		return nil
 	}
 	return fmt.Errorf("port %s is not supported", port)
+}
+
+func (h *Server) getControl() interface{} {
+	if h.isRunning() {
+		return ServerStopControl{
+			Status:     "Running",
+			ListenAddr: h.getPublicListerAddr(),
+		}
+	}
+	return ServerStartControl{
+		Status: "Not running",
+	}
 }
 
 func (h *Server) Ports() []module.NodePort {
@@ -418,23 +493,23 @@ func (h *Server) Ports() []module.NodePort {
 			},
 		},
 		{
-			Name:     ServerStartPort,
-			Label:    "Start",
-			Source:   true,
-			Position: module.Left,
-			Configuration: ServerStart{
-				WriteTimeout: 10,
-				ReadTimeout:  60,
-				AutoHostName: true,
-			},
-		},
-		{
 			Name:          ServerControlPort,
-			Label:         "Status",
-			Source:        true,
+			Label:         "Dashboard",
 			Control:       true,
-			Configuration: h.getStatus(),
+			Configuration: h.getControl(),
 		},
+	}
+
+	if h.settings.EnableStartPort {
+
+		ports = append(ports, module.NodePort{
+			Name:          ServerStartPort,
+			Label:         "Start",
+			Source:        true,
+			Position:      module.Left,
+			Configuration: h.lastStartSettings,
+		})
+
 	}
 
 	// programmatically stop server

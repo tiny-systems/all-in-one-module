@@ -4,7 +4,6 @@ go 1.20
 
 require (
 	github.com/clbanning/mxj/v2 v2.5.7
-	github.com/davecgh/go-spew v1.1.1
 	github.com/goccy/go-json v0.10.2
 	github.com/google/uuid v1.3.1
 	github.com/labstack/echo/v4 v4.11.1
@@ -18,8 +17,9 @@ require (
 	github.com/spf13/viper v1.15.0
 	github.com/spyzhov/ajson v0.9.0
 	github.com/swaggest/jsonschema-go v0.3.62
-	github.com/tiny-systems/module v0.1.42
+	github.com/tiny-systems/module v0.1.43
 	github.com/wneessen/go-mail v0.3.9
+	go.uber.org/atomic v1.11.0
 	golang.org/x/oauth2 v0.13.0
 	google.golang.org/api v0.126.0
 )
@@ -31,6 +31,7 @@ require (
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/deepmap/oapi-codegen v1.15.0 // indirect
 	github.com/distribution/reference v0.5.0 // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
