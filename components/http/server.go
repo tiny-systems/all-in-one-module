@@ -47,7 +47,7 @@ type Server struct {
 	settings     ServerSettings
 	settingsLock *sync.Mutex
 	//
-	lastStartSettings ServerStart
+	startSettings ServerStart
 	//
 	contexts      *ttlmap.TTLMap
 	addressGetter module.ListenAddressGetter
@@ -70,7 +70,7 @@ func (h *Server) Instance() module.Component {
 		cancelFuncLock:       &sync.Mutex{},
 		settingsLock:         &sync.Mutex{},
 		startErr:             &atomic.Error{},
-		lastStartSettings: ServerStart{
+		startSettings: ServerStart{
 			WriteTimeout: 10,
 			ReadTimeout:  60,
 			AutoHostName: true,
@@ -383,7 +383,7 @@ func (h *Server) Handle(ctx context.Context, handler module.Handler, port string
 				return nil
 			}
 			go func() {
-				h.startErr.Store(h.start(ctx, h.lastStartSettings, handler))
+				h.startErr.Store(h.start(ctx, h.startSettings, handler))
 			}()
 			time.Sleep(time.Second * 3)
 			return h.startErr.Load()
@@ -410,8 +410,6 @@ func (h *Server) Handle(ctx context.Context, handler module.Handler, port string
 		if !ok {
 			return fmt.Errorf("invalid start message")
 		}
-
-		h.lastStartSettings = in
 
 		if h.stop() != nil {
 			return nil
@@ -507,7 +505,7 @@ func (h *Server) Ports() []module.NodePort {
 			Label:         "Start",
 			Source:        true,
 			Position:      module.Left,
-			Configuration: h.lastStartSettings,
+			Configuration: h.startSettings,
 		})
 
 	}
