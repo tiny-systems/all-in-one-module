@@ -364,6 +364,8 @@ github.com/tiny-systems/errorpanic v0.7.1 h1:GgbimfhC2wnQ8012SGGxh743ryaJXSSD7bo
 github.com/tiny-systems/errorpanic v0.7.1/go.mod h1:AQobicdSB/J3RzN81pTG4dqgcULaEIrEOvNC8TpSgxw=
 github.com/tiny-systems/module v0.1.43 h1:5fSv/kC7QzalOHLtVcONtZ92qPyHgPbMbII68+mM2LQ=
 github.com/tiny-systems/module v0.1.43/go.mod h1:kpXJe4wdf/1kBaaqszBE+Pn8prwsN9Qg12aivhZN/A0=
+github.com/tiny-systems/module v0.1.44 h1:1/6+M2mC4JFa3ZGnTrfcH+3m5NrIKXnhhoguduBX97w=
+github.com/tiny-systems/module v0.1.44/go.mod h1:kpXJe4wdf/1kBaaqszBE+Pn8prwsN9Qg12aivhZN/A0=
 github.com/tiny-systems/platform-api v0.0.7 h1:6c5pf6SP1pkC58OqKd3tCz7Lbc1p3bqIQLiCI/jSSMA=
 github.com/tiny-systems/platform-api v0.0.7/go.mod h1:lQlZkBcEpwtG2nA/48zKpcEKxIMSZP/dqcd8DGpnJ40=
 github.com/ugorji/go/codec v1.2.11 h1:BMaWp1Bb6fHwEtbplGBGJ498wD+LKlNSl25MjdZY4dU=
