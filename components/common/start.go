@@ -37,7 +37,7 @@ func (t *Start) Instance() module.Component {
 func (t *Start) GetInfo() module.ComponentInfo {
 	return module.ComponentInfo{
 		Name:        StartComponent,
-		Description: "Start",
+		Description: "Signal",
 		Info:        "Sends any message when flow starts",
 		Tags:        []string{"SDK"},
 	}
