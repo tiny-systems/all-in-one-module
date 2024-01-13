@@ -13,7 +13,6 @@ go run cmd/main.go run --version 0.1.0 --name my-module
 go run cmd/main.go build --version 0.1.0 --name main --devkey devkeyabc1111
 ```
 
-
 ### Prerequisites 
 * Golang v1.20+
 * Docker
