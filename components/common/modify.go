@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/tiny-systems/module/module"
 	"github.com/tiny-systems/module/registry"
-	"time"
 )
 
 const (
@@ -41,7 +40,6 @@ func (t *Modify) GetInfo() module.ComponentInfo {
 }
 
 func (t *Modify) Handle(ctx context.Context, handler module.Handler, port string, msg interface{}) error {
-	time.Sleep(time.Second)
 	if in, ok := msg.(ModifyInMessage); ok {
 		return handler(ModifyOutPort, ModifyOutMessage{
 			Context: in.Context,
