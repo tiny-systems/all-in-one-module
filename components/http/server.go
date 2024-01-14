@@ -59,6 +59,8 @@ type Server struct {
 	cancelFunc     context.CancelFunc
 	cancelFuncLock *sync.Mutex
 
+	startLock *sync.Mutex
+
 	startErr *atomic.Error
 	//
 }
@@ -69,7 +71,9 @@ func (h *Server) Instance() module.Component {
 		publicListenAddrLock: &sync.Mutex{},
 		cancelFuncLock:       &sync.Mutex{},
 		settingsLock:         &sync.Mutex{},
-		startErr:             &atomic.Error{},
+		startLock:            &sync.Mutex{},
+
+		startErr: &atomic.Error{},
 		startSettings: ServerStart{
 			WriteTimeout: 10,
 			ReadTimeout:  60,
@@ -180,7 +184,6 @@ func (h *Server) stop() error {
 	defer h.cancelFuncLock.Unlock()
 	if h.cancelFunc != nil {
 		h.cancelFunc()
-		time.Sleep(time.Second * 3)
 	}
 	return nil
 }
@@ -188,6 +191,7 @@ func (h *Server) stop() error {
 func (h *Server) setCancelFunc(f func()) {
 	h.cancelFuncLock.Lock()
 	defer h.cancelFuncLock.Unlock()
+
 	h.cancelFunc = f
 }
 
@@ -199,12 +203,15 @@ func (h *Server) isRunning() bool {
 
 func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Handler) error {
 
+	h.startLock.Lock()
+	defer h.startLock.Unlock()
+
 	ctx, cancel := context.WithCancel(ctx)
 	h.setCancelFunc(cancel)
 
 	defer func() {
 		h.setCancelFunc(nil)
-		cancel()
+		h.stop()
 	}()
 
 	h.contexts = ttlmap.New(ctx, msg.ReadTimeout+msg.ReadTimeout)
