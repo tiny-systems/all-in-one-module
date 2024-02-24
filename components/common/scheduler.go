@@ -79,7 +79,7 @@ func (s *Scheduler) GetInfo() module.ComponentInfo {
 	}
 }
 
-func (s *Scheduler) Emit(ctx context.Context, handle module.Handler) error {
+func (s *Scheduler) emit(ctx context.Context) error {
 	for _, k := range s.tasks.Keys() {
 		v, _ := s.tasks.Get(k)
 		go s.waitTask(ctx, v)
@@ -89,6 +89,8 @@ func (s *Scheduler) Emit(ctx context.Context, handle module.Handler) error {
 }
 
 func (s *Scheduler) Handle(ctx context.Context, handler module.Handler, port string, msg interface{}) error {
+
+	//emit
 	if port == module.SettingsPort {
 		in, ok := msg.(SchedulerSettings)
 		if !ok {

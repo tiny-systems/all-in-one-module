@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	StartComponent          = "start"
+	SignalComponent         = "signal"
 	StartOutPort     string = "out"
 	StartControlPort string = "control"
 )
@@ -36,7 +36,7 @@ func (t *Start) Instance() module.Component {
 
 func (t *Start) GetInfo() module.ComponentInfo {
 	return module.ComponentInfo{
-		Name:        StartComponent,
+		Name:        SignalComponent,
 		Description: "Signal",
 		Info:        "Sends any message when flow starts",
 		Tags:        []string{"SDK"},

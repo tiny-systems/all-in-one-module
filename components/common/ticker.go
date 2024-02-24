@@ -10,9 +10,10 @@ import (
 )
 
 const (
-	TickerComponent         = "ticker"
-	TickerOutPort    string = "out"
-	TickerStatusPort string = "status"
+	TickerComponent          = "ticker"
+	TickerOutPort     string = "out"
+	TickerStatusPort  string = "status"
+	TickerControlPort string = "control"
 )
 
 type TickerContext any
@@ -55,7 +56,7 @@ func (t *Ticker) GetInfo() module.ComponentInfo {
 }
 
 // Emit non a pointer receiver copies Ticker with copy of settings
-func (t *Ticker) Emit(ctx context.Context, handler module.Handler) error {
+func (t *Ticker) emit(ctx context.Context, handler module.Handler) error {
 	ticker := time.NewTicker(time.Duration(t.settings.Period) * time.Millisecond)
 	defer ticker.Stop()
 	for {
@@ -117,7 +118,7 @@ func (t *Ticker) Ports() []module.NodePort {
 	if t.settings.EnableControlPort {
 		ports = append(ports, module.NodePort{
 			Position:      module.Left,
-			Name:          "control",
+			Name:          TickerControlPort,
 			Label:         "Control",
 			Source:        true,
 			Configuration: TickerControl{},

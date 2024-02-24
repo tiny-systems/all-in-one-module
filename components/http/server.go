@@ -16,6 +16,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sort"
 	"strings"
 	"sync"
@@ -44,6 +45,7 @@ const (
 )
 
 type Server struct {
+	e            *echo.Echo
 	settings     ServerSettings
 	settingsLock *sync.Mutex
 	//
@@ -59,19 +61,18 @@ type Server struct {
 	cancelFunc     context.CancelFunc
 	cancelFuncLock *sync.Mutex
 
-	startLock *sync.Mutex
-
 	startErr *atomic.Error
 	//
 }
 
 func (h *Server) Instance() module.Component {
+
 	return &Server{
+		e:                    echo.New(),
 		publicListenAddr:     []string{},
 		publicListenAddrLock: &sync.Mutex{},
 		cancelFuncLock:       &sync.Mutex{},
 		settingsLock:         &sync.Mutex{},
-		startLock:            &sync.Mutex{},
 
 		startErr: &atomic.Error{},
 		startSettings: ServerStart{
@@ -84,10 +85,6 @@ func (h *Server) Instance() module.Component {
 			EnableStopPort:   false,
 		},
 	}
-}
-
-func (h *Server) HTTPService(getter module.ListenAddressGetter) {
-	h.addressGetter = getter
 }
 
 type ServerSettings struct {
@@ -133,15 +130,10 @@ type ServerStopControl struct {
 type ServerStop struct {
 }
 
-type ServerError struct {
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-}
-
 type ServerStatus struct {
 	Context    ServerStartContext `json:"context" title:"Context" propertyOrder:"1"`
 	ListenAddr []string           `json:"listenAddr" title:"Listen Address" readonly:"true" propertyOrder:"2"`
-	Error      *ServerError       `json:"error" title:"Error" readonly:"true" propertyOrder:"3"`
+	IsRunning  bool               `json:"isRunning" title:"Is running" readonly:"true" propertyOrder:"3"`
 }
 
 type ServerResponseBody any
@@ -179,19 +171,35 @@ func (h *Server) GetInfo() module.ComponentInfo {
 	}
 }
 
-func (h *Server) stop() error {
+func (h *Server) stop(ctx context.Context, handler module.Handler) error {
+	var cf context.CancelFunc
+
 	h.cancelFuncLock.Lock()
-	defer h.cancelFuncLock.Unlock()
-	if h.cancelFunc != nil {
-		h.cancelFunc()
+	cf = h.cancelFunc
+	h.cancelFuncLock.Unlock()
+
+	if cf != nil {
+		// cancel
+		cf()
+
+		h.cancelFuncLock.Lock()
+		h.cancelFunc = nil
+		h.cancelFuncLock.Unlock()
+
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+		defer cancel()
+		h.startErr.Store(h.e.Shutdown(shutdownCtx))
+		// send status when we stopped
+		_ = h.sendStatus(handler)
 	}
+
+	h.setPublicListerAddr([]string{})
 	return nil
 }
 
 func (h *Server) setCancelFunc(f func()) {
 	h.cancelFuncLock.Lock()
 	defer h.cancelFuncLock.Unlock()
-
 	h.cancelFunc = f
 }
 
@@ -203,24 +211,24 @@ func (h *Server) isRunning() bool {
 
 func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Handler) error {
 
-	h.startLock.Lock()
-	defer h.startLock.Unlock()
+	e := echo.New()
+	e.HideBanner = false
+	e.HidePort = false
+
+	h.e = e
+	l := log.FromContext(ctx)
+	l.Info("HTTP START")
 
 	ctx, cancel := context.WithCancel(ctx)
 	h.setCancelFunc(cancel)
 
 	defer func() {
-		h.setCancelFunc(nil)
-		h.stop()
+		h.stop(ctx, handler)
 	}()
 
 	h.contexts = ttlmap.New(ctx, msg.ReadTimeout+msg.ReadTimeout)
-	e := echo.New()
 
-	e.HideBanner = false
-	e.HidePort = false
-
-	e.Any("*", func(c echo.Context) error {
+	h.e.Any("*", func(c echo.Context) error {
 		id, err := uuid.NewUUID()
 		if err != nil {
 			return err
@@ -285,44 +293,56 @@ func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Hand
 
 		ch := make(chan ServerResponse)
 		h.contexts.Put(idStr, ch)
+		defer close(ch)
+
+		doneCh := make(chan struct{})
+		go func() {
+			defer close(doneCh)
+
+			for {
+				select {
+				case <-c.Request().Context().Done():
+					return
+				case <-ctx.Done():
+					return
+
+				case <-time.Tick(time.Duration(msg.ReadTimeout) * time.Second):
+					c.Error(fmt.Errorf("read timeout"))
+					return
+
+				case resp := <-ch:
+					for _, header := range resp.Headers {
+						c.Response().Header().Set(header.Key, header.Value)
+					}
+					switch resp.ContentType {
+					case MIMEApplicationXML:
+						c.XML(resp.StatusCode, resp.Body)
+					case MIMEApplicationJSON:
+						c.JSON(resp.StatusCode, resp.Body)
+					case MIMETextHTML:
+						c.HTML(resp.StatusCode, fmt.Sprintf("%v", resp.Body))
+					case MimeTextPlain:
+						c.String(resp.StatusCode, fmt.Sprintf("%v", resp.Body))
+					default:
+						c.String(resp.StatusCode, fmt.Sprintf("%v", resp.Body))
+					}
+					return
+				}
+			}
+		}()
 
 		if err = handler(ServerRequestPort, requestResult); err != nil {
 			return err
 		}
-
-		for {
-			select {
-			case <-time.Tick(time.Duration(msg.ReadTimeout) * time.Second):
-				err = fmt.Errorf("response timeout")
-				c.Error(err)
-				return err
-			case resp := <-ch:
-				for _, h := range resp.Headers {
-					c.Response().Header().Set(h.Key, h.Value)
-				}
-				switch resp.ContentType {
-				case MIMEApplicationXML:
-					return c.XML(resp.StatusCode, resp.Body)
-				case MIMEApplicationJSON:
-					return c.JSON(resp.StatusCode, resp.Body)
-				case MIMETextHTML:
-					return c.HTML(resp.StatusCode, fmt.Sprintf("%v", resp.Body))
-				case MimeTextPlain:
-					return c.String(resp.StatusCode, fmt.Sprintf("%v", resp.Body))
-				default:
-					return c.String(resp.StatusCode, fmt.Sprintf("%v", resp.Body))
-				}
-			}
-		}
+		<-doneCh
+		return nil
 	})
 
-	e.Server.ReadTimeout = time.Duration(msg.ReadTimeout) * time.Second
-	e.Server.WriteTimeout = time.Duration(msg.WriteTimeout) * time.Second
+	h.e.Server.ReadTimeout = time.Duration(msg.ReadTimeout) * time.Second
+	h.e.Server.WriteTimeout = time.Duration(msg.WriteTimeout) * time.Second
 
 	var (
-		ch      = make(chan struct{}, 0)
-		upgrade module.AddressUpgrade
-
+		upgrade    module.AddressUpgrade
 		listenPort int
 	)
 
@@ -337,30 +357,23 @@ func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Hand
 	}
 
 	go func() {
-		h.startErr.Store(e.Start(listenAddr))
+		h.startErr.Store(h.e.Start(listenAddr))
 	}()
 
-	go func() {
-		defer close(ch)
-		time.Sleep(time.Second)
-		if e.Listener != nil {
-			if tcpAddr, ok := e.Listener.Addr().(*net.TCPAddr); ok {
-				hostnames, err := upgrade(ctx, msg.AutoHostName, msg.Hostnames, tcpAddr.Port)
-				if err != nil {
-					h.startErr.Store(err)
-					h.setPublicListerAddr([]string{fmt.Sprintf("http://localhost:%d", tcpAddr.Port)})
-				} else {
-					h.setPublicListerAddr(hostnames)
-				}
+	time.Sleep(time.Millisecond * 1500)
+	if h.e.Listener != nil {
+		if tcpAddr, ok := h.e.Listener.Addr().(*net.TCPAddr); ok {
+			publicHostnames, err := upgrade(ctx, msg.AutoHostName, msg.Hostnames, tcpAddr.Port)
+			if err != nil {
+				h.setPublicListerAddr([]string{fmt.Sprintf("http://localhost:%d", tcpAddr.Port)})
+			} else {
+				h.setPublicListerAddr(publicHostnames)
 			}
 		}
-		<-ctx.Done()
-	}()
-	<-ch
-
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), time.Second*3)
-	defer cancel()
-	h.startErr.Store(e.Shutdown(shutdownCtx))
+	}
+	// send status that we run
+	_ = h.sendStatus(handler)
+	<-ctx.Done()
 
 	return h.startErr.Load()
 }
@@ -378,7 +391,13 @@ func (h *Server) getPublicListerAddr() []string {
 }
 
 func (h *Server) Handle(ctx context.Context, handler module.Handler, port string, msg interface{}) error {
+
 	switch port {
+
+	case module.HttpPort:
+		h.addressGetter, _ = msg.(module.ListenAddressGetter)
+		return nil
+
 	case ServerControlPort:
 		if msg == nil {
 			break
@@ -386,17 +405,17 @@ func (h *Server) Handle(ctx context.Context, handler module.Handler, port string
 
 		switch msg.(type) {
 		case ServerStartControl:
-			if h.stop() != nil {
-				return nil
+			if err := h.stop(ctx, handler); err != nil {
+				return err
 			}
 			go func() {
-				h.startErr.Store(h.start(ctx, h.startSettings, handler))
+				time.Sleep(time.Second * 3)
+				_ = handler(module.RefreshPort, nil)
 			}()
-			time.Sleep(time.Second * 3)
-			return h.startErr.Load()
+			return h.start(ctx, h.startSettings, handler)
 
 		case ServerStopControl:
-			err := h.stop()
+			err := h.stop(ctx, handler)
 			return err
 		}
 
@@ -407,10 +426,11 @@ func (h *Server) Handle(ctx context.Context, handler module.Handler, port string
 		}
 
 		h.settingsLock.Lock()
-		defer h.settingsLock.Unlock()
-
 		h.settings = in
-		return nil
+		h.settingsLock.Unlock()
+
+		// send status when we applied settings
+		return h.sendStatus(handler)
 
 	case ServerStartPort:
 		in, ok := msg.(ServerStart)
@@ -418,20 +438,16 @@ func (h *Server) Handle(ctx context.Context, handler module.Handler, port string
 			return fmt.Errorf("invalid start message")
 		}
 
-		if h.stop() != nil {
-			return nil
-		}
 		go func() {
-			h.startErr.Store(h.start(ctx, in, handler))
+			time.Sleep(time.Second * 3)
+			_ = handler(module.RefreshPort, nil)
 		}()
-		time.Sleep(time.Second * 3)
-
-		handler(module.RefreshPort, nil)
-		return h.startErr.Load()
+		// give time to fail
+		return h.start(ctx, in, handler)
 
 	case ServerStopPort:
-		err := h.stop()
-		handler(module.RefreshPort, nil)
+		err := h.stop(ctx, handler)
+		_ = handler(module.RefreshPort, nil)
 		return err
 
 	case ServerResponsePort:
@@ -475,6 +491,9 @@ func (h *Server) Ports() []module.NodePort {
 	defer h.settingsLock.Unlock()
 
 	ports := []module.NodePort{
+		{
+			Name: module.HttpPort,
+		},
 		{
 			Name:          module.SettingsPort,
 			Label:         "Settings",
@@ -529,6 +548,7 @@ func (h *Server) Ports() []module.NodePort {
 	}
 
 	// programmatically use status in flows
+
 	if h.settings.EnableStatusPort {
 		ports = append(ports, module.NodePort{
 			Position:      module.Bottom,
@@ -544,14 +564,18 @@ func (h *Server) Ports() []module.NodePort {
 func (h *Server) getStatus() ServerStatus {
 	return ServerStatus{
 		ListenAddr: h.getPublicListerAddr(),
-		Error:      nil,
+		IsRunning:  h.isRunning(),
 	}
 }
 
-var _ module.Component = (*Server)(nil)
+func (h *Server) sendStatus(handler module.Handler) error {
+	return handler(ServerStatusPort, ServerStatus{
+		ListenAddr: h.getPublicListerAddr(),
+		IsRunning:  h.isRunning(),
+	})
+}
 
-// var _ module.Emitter = (*Server)(nil)
-var _ module.HTTPService = (*Server)(nil)
+var _ module.Component = (*Server)(nil)
 
 func init() {
 	registry.Register(&Server{})
