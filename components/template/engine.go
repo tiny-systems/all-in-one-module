@@ -7,6 +7,7 @@ import (
 	"github.com/tiny-systems/module/module"
 	"github.com/tiny-systems/module/registry"
 	"html/template"
+	"time"
 )
 
 const (
@@ -95,7 +96,8 @@ I'm page 2
 			Content: `{{define "footer"}}
 <hr/>
 <div style="text-align:center">
- &copy; 2024
+ <p>&copy; {{now.UTC.Year}}</p>
+ <p>{{builtWithTS}}</p>
 </div>
 {{end}}`,
 		},
@@ -134,9 +136,16 @@ func (h *Engine) Handle(ctx context.Context, handler module.Handler, port string
 		h.settings = in
 		ts := map[string]*template.Template{}
 
+		funcMap := template.FuncMap{
+			"now": time.Now,
+			"builtWith": func() template.HTML {
+				return `<a href="https://tinysystems.io?from=builtwith" target="_blank">Built with Tiny Systems</a>`
+			},
+		}
+
 		for _, t := range in.Templates {
 
-			tmpl, err := template.New(t.Name).Parse(t.Content)
+			tmpl, err := template.New(t.Name).Funcs(funcMap).Parse(t.Content)
 			if err != nil {
 				return err
 			}
