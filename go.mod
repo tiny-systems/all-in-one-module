@@ -17,11 +17,12 @@ require (
 	github.com/spf13/viper v1.15.0
 	github.com/spyzhov/ajson v0.9.0
 	github.com/swaggest/jsonschema-go v0.3.62
-	github.com/tiny-systems/module v0.1.57
+	github.com/tiny-systems/module v0.1.60
 	github.com/wneessen/go-mail v0.3.9
 	go.uber.org/atomic v1.11.0
 	golang.org/x/oauth2 v0.13.0
 	google.golang.org/api v0.126.0
+	sigs.k8s.io/controller-runtime v0.17.0
 )
 
 require (
@@ -142,7 +143,6 @@ require (
 	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e // indirect
 	oya.to/namedlocker v1.0.0 // indirect
-	sigs.k8s.io/controller-runtime v0.17.0 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
