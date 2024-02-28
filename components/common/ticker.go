@@ -10,10 +10,11 @@ import (
 )
 
 const (
-	TickerComponent          = "ticker"
-	TickerOutPort     string = "out"
-	TickerStatusPort  string = "status"
-	TickerControlPort string = "control"
+	TickerComponent           = "ticker"
+	TickerOutPort      string = "out"
+	TickerSettingsPort string = "settings"
+	TickerStatusPort   string = "status"
+	TickerControlPort  string = "control"
 )
 
 type TickerContext any
@@ -73,7 +74,7 @@ func (t *Ticker) emit(ctx context.Context, handler module.Handler) error {
 }
 
 func (t *Ticker) Handle(ctx context.Context, handler module.Handler, port string, msg interface{}) error {
-	if port == module.SettingsPort {
+	if port == TickerSettingsPort {
 		settings, ok := msg.(TickerSettings)
 		if !ok {
 			return fmt.Errorf("invalid settings")
@@ -99,7 +100,7 @@ func (t *Ticker) Ports() []module.NodePort {
 			},
 		},
 		{
-			Name:     module.SettingsPort,
+			Name:     TickerSettingsPort,
 			Label:    "Settings",
 			Source:   true,
 			Settings: true,

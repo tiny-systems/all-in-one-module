@@ -22,6 +22,7 @@ const (
 const (
 	PortStore       = "store"
 	PortQuery       = "query"
+	PortSettings    = "settings"
 	PortQueryResult = "query_result"
 	PortStoreResult = "store_result"
 )
@@ -85,7 +86,7 @@ func (k *KeyValueStore) GetInfo() module.ComponentInfo {
 }
 
 func (k *KeyValueStore) Handle(ctx context.Context, output module.Handler, port string, msg interface{}) error {
-	if port == module.SettingsPort {
+	if port == PortSettings {
 		in, ok := msg.(KeyValueStoreSettings)
 		if !ok {
 			return fmt.Errorf("invalid settings")
@@ -216,7 +217,7 @@ func (k *KeyValueStore) Ports() []module.NodePort {
 			Position:      module.Right,
 		},
 		{
-			Name:     module.SettingsPort,
+			Name:     PortSettings,
 			Label:    "Settings",
 			Source:   true,
 			Settings: true,

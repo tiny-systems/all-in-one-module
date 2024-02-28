@@ -14,6 +14,7 @@ import (
 	_ "github.com/tiny-systems/main/components/http"
 	_ "github.com/tiny-systems/main/components/network"
 	_ "github.com/tiny-systems/main/components/slack"
+	_ "github.com/tiny-systems/main/components/template"
 	"github.com/tiny-systems/module/cli"
 	"os"
 	"os/signal"

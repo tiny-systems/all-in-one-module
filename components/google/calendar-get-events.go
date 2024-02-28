@@ -12,7 +12,10 @@ import (
 	"time"
 )
 
-const CalendarGetEventsComponent = "google_calendar_get_events"
+const (
+	CalendarGetEventsComponent = "google_calendar_get_events"
+	SettingsPort               = "settings"
+)
 
 type CalendarGetEventsContext any
 
@@ -66,7 +69,7 @@ func (c *CalendarGetEvents) GetInfo() module.ComponentInfo {
 }
 
 func (c *CalendarGetEvents) Handle(ctx context.Context, output module.Handler, port string, msg interface{}) error {
-	if port == module.SettingsPort {
+	if port == SettingsPort {
 		in, ok := msg.(CalendarGetEventsSettings)
 		if !ok {
 			return fmt.Errorf("invalid settings")
@@ -129,7 +132,7 @@ func (c *CalendarGetEvents) getEvents(ctx context.Context, req CalendarGetEvents
 func (c *CalendarGetEvents) Ports() []module.NodePort {
 	ports := []module.NodePort{
 		{
-			Name:          module.SettingsPort,
+			Name:          SettingsPort,
 			Label:         "Settings",
 			Configuration: CalendarGetEventsSettings{},
 			Source:        true,

@@ -37,6 +37,7 @@ const (
 const (
 	ServerComponent    string = "http_server"
 	ServerResponsePort        = "response"
+	ServerSettingsPort        = "settings"
 	ServerRequestPort         = "request"
 	ServerStartPort           = "start"
 	ServerControlPort         = "control"
@@ -173,6 +174,9 @@ func (h *Server) GetInfo() module.ComponentInfo {
 
 func (h *Server) stop(ctx context.Context, handler module.Handler) error {
 	var cf context.CancelFunc
+
+	l := log.FromContext(ctx)
+	l.Info("stopping")
 
 	h.cancelFuncLock.Lock()
 	cf = h.cancelFunc
@@ -405,6 +409,7 @@ func (h *Server) Handle(ctx context.Context, handler module.Handler, port string
 
 		switch msg.(type) {
 		case ServerStartControl:
+
 			if err := h.stop(ctx, handler); err != nil {
 				return err
 			}
@@ -415,11 +420,12 @@ func (h *Server) Handle(ctx context.Context, handler module.Handler, port string
 			return h.start(ctx, h.startSettings, handler)
 
 		case ServerStopControl:
+
 			err := h.stop(ctx, handler)
 			return err
 		}
 
-	case module.SettingsPort:
+	case ServerSettingsPort:
 		in, ok := msg.(ServerSettings)
 		if !ok {
 			return fmt.Errorf("invalid settings message")
@@ -462,7 +468,7 @@ func (h *Server) Handle(ctx context.Context, handler module.Handler, port string
 
 		ch := h.contexts.Get(in.RequestID)
 		if ch == nil {
-			return fmt.Errorf("context not found %s", in.RequestID)
+			return fmt.Errorf("context '%s' not found", in.RequestID)
 		}
 
 		if respChannel, ok := ch.(chan ServerResponse); ok {
@@ -495,7 +501,7 @@ func (h *Server) Ports() []module.NodePort {
 			Name: module.HttpPort,
 		},
 		{
-			Name:          module.SettingsPort,
+			Name:          ServerSettingsPort,
 			Label:         "Settings",
 			Configuration: h.settings,
 			Source:        true,

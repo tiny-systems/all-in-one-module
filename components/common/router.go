@@ -11,9 +11,10 @@ import (
 )
 
 const (
-	RouterComponent   = "router"
-	RouterInPort      = "input"
-	RouterDefaultPort = "default"
+	RouterComponent    = "router"
+	RouterSettingsPort = "settings"
+	RouterInPort       = "input"
+	RouterDefaultPort  = "default"
 )
 
 // RouteName special type which can carry its value and possible options for enum values
@@ -90,7 +91,7 @@ func (t *Router) GetInfo() module.ComponentInfo {
 }
 
 func (t *Router) Handle(ctx context.Context, handler module.Handler, port string, msg interface{}) error {
-	if port == module.SettingsPort {
+	if port == RouterSettingsPort {
 		in, ok := msg.(RouterSettings)
 		if !ok {
 			return fmt.Errorf("invalid settings")
@@ -119,16 +120,21 @@ func (t *Router) Handle(ctx context.Context, handler module.Handler, port string
 // Ports drop settings, make it port payload
 func (t *Router) Ports() []module.NodePort {
 
+	val := "A"
+	if len(t.settings.Routes) > 0 {
+		val = t.settings.Routes[0]
+	}
+
 	inMessage := RouterInMessage{
 		Conditions: []Condition{{
-			RouteName: RouteName{Value: "A", Options: t.settings.Routes},
+			RouteName: RouteName{Value: val, Options: t.settings.Routes},
 			Condition: true,
 		}},
 	}
 
 	ports := []module.NodePort{
 		{
-			Name:          module.SettingsPort,
+			Name:          RouterSettingsPort,
 			Label:         "Settings",
 			Source:        true,
 			Settings:      true,

@@ -8,9 +8,10 @@ import (
 )
 
 const (
-	SignalComponent         = "signal"
-	StartOutPort     string = "out"
-	StartControlPort string = "control"
+	SignalComponent          = "signal"
+	StartSettingsPort string = "settings"
+	StartOutPort      string = "out"
+	StartControlPort  string = "control"
 )
 
 type StartContext any
@@ -49,7 +50,7 @@ func (t *Start) Handle(ctx context.Context, handle module.Handler, port string, 
 	case StartControlPort:
 		_ = handle(StartOutPort, msg)
 
-	case module.SettingsPort:
+	case StartSettingsPort:
 		in, ok := msg.(StartSettings)
 		if !ok {
 			return fmt.Errorf("invalid settings")
@@ -62,7 +63,7 @@ func (t *Start) Handle(ctx context.Context, handle module.Handler, port string, 
 func (t *Start) Ports() []module.NodePort {
 	return []module.NodePort{
 		{
-			Name:          module.SettingsPort,
+			Name:          StartSettingsPort,
 			Label:         "Settings",
 			Source:        true,
 			Settings:      true,

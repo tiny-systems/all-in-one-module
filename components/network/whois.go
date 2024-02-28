@@ -59,6 +59,11 @@ func (t *Whois) GetInfo() module.ComponentInfo {
 }
 
 func (t *Whois) Handle(ctx context.Context, handler module.Handler, port string, msg interface{}) error {
+
+	if port != DomainWhoisInPort {
+		return fmt.Errorf("port %s is not supported", port)
+	}
+
 	in, ok := msg.(DomainWhoisRequest)
 	if !ok {
 		return fmt.Errorf("invalid message")

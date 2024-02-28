@@ -11,6 +11,7 @@ import (
 const (
 	SendSlackChannelComponent = "send_slack_channel"
 	PortSuccess               = "success"
+	PortSettings              = "settings"
 	PortError                 = "error"
 	PortIn                    = "in"
 )
@@ -66,7 +67,7 @@ func (t *ChannelSender) GetInfo() module.ComponentInfo {
 }
 
 func (t *ChannelSender) Handle(ctx context.Context, responseHandler module.Handler, port string, msg interface{}) error {
-	if port == module.SettingsPort {
+	if port == PortSettings {
 		in, ok := msg.(ChannelSenderSettings)
 		if !ok {
 			return fmt.Errorf("invalid settings")
@@ -107,7 +108,7 @@ func (t *ChannelSender) Handle(ctx context.Context, responseHandler module.Handl
 func (t *ChannelSender) Ports() []module.NodePort {
 	ports := []module.NodePort{
 		{
-			Name:          module.SettingsPort,
+			Name:          PortSettings,
 			Label:         "Settings",
 			Source:        true,
 			Settings:      true,

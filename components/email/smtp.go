@@ -12,6 +12,7 @@ import (
 const (
 	SendEmailComponent = "send_email"
 	PortSuccess        = "success"
+	PortSettings       = "settings"
 	PortError          = "error"
 	PortIn             = "in"
 )
@@ -86,7 +87,7 @@ func (t *SmtpSender) GetInfo() module.ComponentInfo {
 }
 
 func (t *SmtpSender) Handle(ctx context.Context, responseHandler module.Handler, port string, msg interface{}) error {
-	if port == module.SettingsPort {
+	if port == PortSettings {
 		in, ok := msg.(SenderSettings)
 		if !ok {
 			return fmt.Errorf("invalid settings")
@@ -173,7 +174,7 @@ func (t *SmtpSender) Handle(ctx context.Context, responseHandler module.Handler,
 func (t *SmtpSender) Ports() []module.NodePort {
 	ports := []module.NodePort{
 		{
-			Name:          module.SettingsPort,
+			Name:          PortSettings,
 			Label:         "Settings",
 			Source:        true,
 			Settings:      true,
