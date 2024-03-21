@@ -6,8 +6,8 @@ import (
 	"fmt"
 	cmap "github.com/orcaman/concurrent-map/v2"
 	"github.com/spyzhov/ajson"
-	"github.com/swaggest/jsonschema-go"
 	"github.com/tiny-systems/module/module"
+	"github.com/tiny-systems/module/pkg/jsonschema-go"
 	"github.com/tiny-systems/module/registry"
 )
 
@@ -22,7 +22,6 @@ const (
 const (
 	PortStore       = "store"
 	PortQuery       = "query"
-	PortSettings    = "settings"
 	PortQueryResult = "query_result"
 	PortStoreResult = "store_result"
 )
@@ -86,7 +85,7 @@ func (k *KeyValueStore) GetInfo() module.ComponentInfo {
 }
 
 func (k *KeyValueStore) Handle(ctx context.Context, output module.Handler, port string, msg interface{}) error {
-	if port == PortSettings {
+	if port == module.SettingsPort {
 		in, ok := msg.(KeyValueStoreSettings)
 		if !ok {
 			return fmt.Errorf("invalid settings")
@@ -217,10 +216,9 @@ func (k *KeyValueStore) Ports() []module.NodePort {
 			Position:      module.Right,
 		},
 		{
-			Name:     PortSettings,
-			Label:    "Settings",
-			Source:   true,
-			Settings: true,
+			Name:   module.SettingsPort,
+			Label:  "Settings",
+			Source: true,
 			Configuration: KeyValueStoreSettings{
 				PrimaryKey: "id",
 				Document: KeyValueStoreDocument{

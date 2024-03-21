@@ -10,11 +10,9 @@ import (
 )
 
 const (
-	TickerComponent           = "ticker"
-	TickerOutPort      string = "out"
-	TickerSettingsPort string = "settings"
-	TickerStatusPort   string = "status"
-	TickerControlPort  string = "control"
+	TickerComponent         = "ticker"
+	TickerOutPort    string = "out"
+	TickerStatusPort string = "status"
 )
 
 type TickerContext any
@@ -63,18 +61,17 @@ func (t *Ticker) emit(ctx context.Context, handler module.Handler) error {
 	for {
 		select {
 		case <-ticker.C:
-			fmt.Println("tick")
+
 			atomic.AddInt64(&t.counter, 1)
 			_ = handler(TickerOutPort, t.settings.Context)
 		case <-ctx.Done():
 			return ctx.Err()
 		}
 	}
-
 }
 
 func (t *Ticker) Handle(ctx context.Context, handler module.Handler, port string, msg interface{}) error {
-	if port == TickerSettingsPort {
+	if port == module.SettingsPort {
 		settings, ok := msg.(TickerSettings)
 		if !ok {
 			return fmt.Errorf("invalid settings")
@@ -85,25 +82,25 @@ func (t *Ticker) Handle(ctx context.Context, handler module.Handler, port string
 		t.settings = settings
 		return nil
 	}
+
 	return fmt.Errorf("invalid message")
 }
 
 func (t *Ticker) Ports() []module.NodePort {
 	ports := []module.NodePort{
 		{
-			Name:    TickerStatusPort,
-			Label:   "Status",
-			Source:  true,
-			Control: true,
+			Name:   TickerStatusPort,
+			Label:  "Status",
+			Source: true,
 			Configuration: TickerStatus{
 				Status: fmt.Sprintf("All good: %d", t.counter),
 			},
 		},
 		{
-			Name:     TickerSettingsPort,
-			Label:    "Settings",
-			Source:   true,
-			Settings: true,
+			Name:   module.SettingsPort,
+			Label:  "Settings",
+			Source: true,
+
 			Configuration: TickerSettings{
 				Period: 1000,
 			},
@@ -119,7 +116,7 @@ func (t *Ticker) Ports() []module.NodePort {
 	if t.settings.EnableControlPort {
 		ports = append(ports, module.NodePort{
 			Position:      module.Left,
-			Name:          TickerControlPort,
+			Name:          module.ControlPort,
 			Label:         "Control",
 			Source:        true,
 			Configuration: TickerControl{},

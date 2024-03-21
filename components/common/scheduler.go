@@ -11,11 +11,10 @@ import (
 )
 
 const (
-	SchedulerComponent           = "scheduler"
-	SchedulerOutPort      string = "out"
-	SchedulerSettingsPort string = "settings"
-	SchedulerInPort       string = "in"
-	SchedulerAckPort      string = "ack"
+	SchedulerComponent        = "scheduler"
+	SchedulerOutPort   string = "out"
+	SchedulerInPort    string = "in"
+	SchedulerAckPort   string = "ack"
 )
 
 type SchedulerSettings struct {
@@ -92,7 +91,7 @@ func (s *Scheduler) emit(ctx context.Context) error {
 func (s *Scheduler) Handle(ctx context.Context, handler module.Handler, port string, msg interface{}) error {
 
 	//emit
-	if port == SchedulerSettingsPort {
+	if port == module.SettingsPort {
 		in, ok := msg.(SchedulerSettings)
 		if !ok {
 			return fmt.Errorf("invalid settings")
@@ -175,10 +174,9 @@ func (s *Scheduler) waitTask(ctx context.Context, d *task) {
 func (s *Scheduler) Ports() []module.NodePort {
 	ports := []module.NodePort{
 		{
-			Name:          SchedulerSettingsPort,
+			Name:          module.SettingsPort,
 			Label:         "Settings",
 			Source:        true,
-			Settings:      true,
 			Configuration: SchedulerSettings{},
 		},
 		{

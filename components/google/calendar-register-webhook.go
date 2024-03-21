@@ -67,7 +67,7 @@ func (h *CalendarRegisterWebhook) GetInfo() module.ComponentInfo {
 }
 
 func (h *CalendarRegisterWebhook) Handle(ctx context.Context, handler module.Handler, port string, msg interface{}) error {
-	if port == SettingsPort {
+	if port == module.SettingsPort {
 		in, ok := msg.(CalendarRegisterWebhookSettings)
 		if !ok {
 			return fmt.Errorf("invalid settings")
@@ -81,11 +81,10 @@ func (h *CalendarRegisterWebhook) Handle(ctx context.Context, handler module.Han
 func (h *CalendarRegisterWebhook) Ports() []module.NodePort {
 	ports := []module.NodePort{
 		{
-			Name:          SettingsPort,
+			Name:          module.SettingsPort,
 			Label:         "Settings",
 			Configuration: CalendarRegisterWebhookSettings{},
 			Source:        true,
-			Settings:      true,
 		},
 		{
 			Name:  "request",

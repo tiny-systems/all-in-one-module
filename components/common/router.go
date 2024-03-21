@@ -4,17 +4,16 @@ import (
 	"context"
 	"fmt"
 	"github.com/goccy/go-json"
-	"github.com/swaggest/jsonschema-go"
 	"github.com/tiny-systems/module/module"
+	"github.com/tiny-systems/module/pkg/jsonschema-go"
 	"github.com/tiny-systems/module/registry"
 	"strings"
 )
 
 const (
-	RouterComponent    = "router"
-	RouterSettingsPort = "settings"
-	RouterInPort       = "input"
-	RouterDefaultPort  = "default"
+	RouterComponent   = "router"
+	RouterInPort      = "input"
+	RouterDefaultPort = "default"
 )
 
 // RouteName special type which can carry its value and possible options for enum values
@@ -91,7 +90,7 @@ func (t *Router) GetInfo() module.ComponentInfo {
 }
 
 func (t *Router) Handle(ctx context.Context, handler module.Handler, port string, msg interface{}) error {
-	if port == RouterSettingsPort {
+	if port == module.SettingsPort {
 		in, ok := msg.(RouterSettings)
 		if !ok {
 			return fmt.Errorf("invalid settings")
@@ -134,10 +133,9 @@ func (t *Router) Ports() []module.NodePort {
 
 	ports := []module.NodePort{
 		{
-			Name:          RouterSettingsPort,
+			Name:          module.SettingsPort,
 			Label:         "Settings",
 			Source:        true,
-			Settings:      true,
 			Configuration: t.settings,
 		},
 		{

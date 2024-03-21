@@ -6,17 +6,16 @@ import (
 	"github.com/clbanning/mxj/v2"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
-	"github.com/swaggest/jsonschema-go"
 	"github.com/tiny-systems/main/pkg/ttlmap"
 	"github.com/tiny-systems/main/pkg/utils"
 	"github.com/tiny-systems/module/module"
+	"github.com/tiny-systems/module/pkg/jsonschema-go"
 	"github.com/tiny-systems/module/registry"
 	"go.uber.org/atomic"
 	"io"
 	"net"
 	"net/http"
 	"net/url"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sort"
 	"strings"
 	"sync"
@@ -37,10 +36,8 @@ const (
 const (
 	ServerComponent    string = "http_server"
 	ServerResponsePort        = "response"
-	ServerSettingsPort        = "settings"
 	ServerRequestPort         = "request"
 	ServerStartPort           = "start"
-	ServerControlPort         = "control"
 	ServerStopPort            = "stop"
 	ServerStatusPort          = "status"
 )
@@ -73,8 +70,9 @@ func (h *Server) Instance() module.Component {
 		publicListenAddr:     []string{},
 		publicListenAddrLock: &sync.Mutex{},
 		cancelFuncLock:       &sync.Mutex{},
-		settingsLock:         &sync.Mutex{},
-
+		//
+		settingsLock: &sync.Mutex{},
+		//
 		startErr: &atomic.Error{},
 		startSettings: ServerStart{
 			WriteTimeout: 10,
@@ -97,7 +95,7 @@ type ServerSettings struct {
 type ServerStartContext any
 
 type ServerStart struct {
-	Context      ServerStartContext `json:"context" configurable:"true" title:"Context" propertyOrder:"1"`
+	Context      ServerStartContext `json:"context" configurable:"true" title:"Context" description:"Start context" propertyOrder:"1"`
 	AutoHostName bool               `json:"autoHostName" title:"Automatically generate hostname" description:"Use cluster auto subdomain setup if any." propertyOrder:"2"`
 	Hostnames    []string           `json:"hostnames" title:"Hostnames" required:"false" description:"List of virtual host this server should be bound to." propertyOrder:"3"` //requiredWhen:"['kind', 'equal', 'enum 1']"
 	ReadTimeout  int                `json:"readTimeout" required:"true" title:"Read Timeout" description:"Read timeout is the maximum duration for reading the entire request, including the body. A zero or negative value means there will be no timeout." propertyOrder:"4"`
@@ -172,32 +170,13 @@ func (h *Server) GetInfo() module.ComponentInfo {
 	}
 }
 
-func (h *Server) stop(ctx context.Context, handler module.Handler) error {
-	var cf context.CancelFunc
-
-	l := log.FromContext(ctx)
-	l.Info("stopping")
-
+func (h *Server) stop() error {
 	h.cancelFuncLock.Lock()
-	cf = h.cancelFunc
-	h.cancelFuncLock.Unlock()
-
-	if cf != nil {
-		// cancel
-		cf()
-
-		h.cancelFuncLock.Lock()
-		h.cancelFunc = nil
-		h.cancelFuncLock.Unlock()
-
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), time.Second*3)
-		defer cancel()
-		h.startErr.Store(h.e.Shutdown(shutdownCtx))
-		// send status when we stopped
-		_ = h.sendStatus(handler)
+	defer h.cancelFuncLock.Unlock()
+	if h.cancelFunc == nil {
+		return nil
 	}
-
-	h.setPublicListerAddr([]string{})
+	h.cancelFunc()
 	return nil
 }
 
@@ -210,6 +189,7 @@ func (h *Server) setCancelFunc(f func()) {
 func (h *Server) isRunning() bool {
 	h.cancelFuncLock.Lock()
 	defer h.cancelFuncLock.Unlock()
+
 	return h.cancelFunc != nil
 }
 
@@ -220,15 +200,9 @@ func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Hand
 	e.HidePort = false
 
 	h.e = e
-	l := log.FromContext(ctx)
-	l.Info("HTTP START")
 
 	ctx, cancel := context.WithCancel(ctx)
 	h.setCancelFunc(cancel)
-
-	defer func() {
-		h.stop(ctx, handler)
-	}()
 
 	h.contexts = ttlmap.New(ctx, msg.ReadTimeout+msg.ReadTimeout)
 
@@ -379,6 +353,13 @@ func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Hand
 	_ = h.sendStatus(handler)
 	<-ctx.Done()
 
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	defer cancel()
+	h.e.Shutdown(shutdownCtx)
+	h.setCancelFunc(nil)
+	// send status when we stopped
+	_ = h.sendStatus(handler)
+
 	return h.startErr.Load()
 }
 
@@ -397,35 +378,30 @@ func (h *Server) getPublicListerAddr() []string {
 func (h *Server) Handle(ctx context.Context, handler module.Handler, port string, msg interface{}) error {
 
 	switch port {
-
 	case module.HttpPort:
 		h.addressGetter, _ = msg.(module.ListenAddressGetter)
 		return nil
 
-	case ServerControlPort:
+	case module.ControlPort:
 		if msg == nil {
 			break
 		}
 
 		switch msg.(type) {
 		case ServerStartControl:
-
-			if err := h.stop(ctx, handler); err != nil {
-				return err
-			}
 			go func() {
 				time.Sleep(time.Second * 3)
-				_ = handler(module.RefreshPort, nil)
+				_ = handler(module.ReconcilePort, nil)
 			}()
 			return h.start(ctx, h.startSettings, handler)
 
 		case ServerStopControl:
-
-			err := h.stop(ctx, handler)
+			err := h.stop()
+			_ = handler(module.ReconcilePort, nil)
 			return err
 		}
 
-	case ServerSettingsPort:
+	case module.SettingsPort:
 		in, ok := msg.(ServerSettings)
 		if !ok {
 			return fmt.Errorf("invalid settings message")
@@ -446,14 +422,14 @@ func (h *Server) Handle(ctx context.Context, handler module.Handler, port string
 
 		go func() {
 			time.Sleep(time.Second * 3)
-			_ = handler(module.RefreshPort, nil)
+			_ = handler(module.ReconcilePort, nil)
 		}()
 		// give time to fail
 		return h.start(ctx, in, handler)
 
 	case ServerStopPort:
-		err := h.stop(ctx, handler)
-		_ = handler(module.RefreshPort, nil)
+		err := h.stop()
+		_ = handler(module.ReconcilePort, nil)
 		return err
 
 	case ServerResponsePort:
@@ -501,11 +477,10 @@ func (h *Server) Ports() []module.NodePort {
 			Name: module.HttpPort,
 		},
 		{
-			Name:          ServerSettingsPort,
+			Name:          module.SettingsPort,
 			Label:         "Settings",
 			Configuration: h.settings,
 			Source:        true,
-			Settings:      true,
 		},
 		{
 			Name:          ServerRequestPort,
@@ -523,9 +498,8 @@ func (h *Server) Ports() []module.NodePort {
 			},
 		},
 		{
-			Name:          ServerControlPort,
+			Name:          module.ControlPort,
 			Label:         "Dashboard",
-			Control:       true,
 			Configuration: h.getControl(),
 		},
 	}

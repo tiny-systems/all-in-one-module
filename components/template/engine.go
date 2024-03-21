@@ -11,10 +11,9 @@ import (
 )
 
 const (
-	EngineComponent    = "template-engine"
-	EngineInPort       = "input"
-	EngineSettingsPort = "settings"
-	EngineOutPort      = "output"
+	EngineComponent = "template-engine"
+	EngineInPort    = "input"
+	EngineOutPort   = "output"
 )
 
 type Context any
@@ -97,7 +96,7 @@ I'm page 2
 <hr/>
 <div style="text-align:center">
  <p>&copy; {{now.UTC.Year}}</p>
- <p>{{builtWithTS}}</p>
+ <p>{{builtWith}}</p>
 </div>
 {{end}}`,
 		},
@@ -126,7 +125,7 @@ func (h *Engine) GetInfo() module.ComponentInfo {
 func (h *Engine) Handle(ctx context.Context, handler module.Handler, port string, msg interface{}) error {
 
 	switch port {
-	case EngineSettingsPort:
+	case module.SettingsPort:
 		// compile template
 		in, ok := msg.(Settings)
 		if !ok {
@@ -207,11 +206,10 @@ func (h *Engine) Ports() []module.NodePort {
 			Configuration: Output{},
 		},
 		{
-			Name:          EngineSettingsPort,
+			Name:          module.SettingsPort,
 			Label:         "Settings",
 			Position:      module.Bottom,
 			Source:        true,
-			Settings:      true,
 			Configuration: h.settings,
 		},
 	}

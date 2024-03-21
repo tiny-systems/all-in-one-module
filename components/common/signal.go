@@ -8,16 +8,15 @@ import (
 )
 
 const (
-	SignalComponent          = "signal"
-	StartSettingsPort string = "settings"
-	StartOutPort      string = "out"
-	StartControlPort  string = "control"
+	SignalComponent        = "signal"
+	StartOutPort    string = "out"
 )
 
 type StartContext any
 
 type StartSettings struct {
-	Context StartContext `json:"context" configurable:"true" title:"Context" description:"Arbitrary message to be sent during first run or when system will be restarted"`
+	Context StartContext `json:"context" configurable:"true" title:"Context" description:"Arbitrary message to send" propertyOrder:"1"`
+	Auto    bool         `json:"auto" title:"Auto send" description:"Send signal automatically" propertyOrder:"2"`
 }
 
 type Start struct {
@@ -26,7 +25,7 @@ type Start struct {
 
 type StartControl struct {
 	Send    bool         `json:"send" format:"button" title:"Send" required:"true" propertyOrder:"1"`
-	Context StartContext `json:"context"`
+	Context StartContext `json:"context" propertyOrder:"2" title:"Context"`
 }
 
 func (t *Start) Instance() module.Component {
@@ -47,15 +46,18 @@ func (t *Start) GetInfo() module.ComponentInfo {
 func (t *Start) Handle(ctx context.Context, handle module.Handler, port string, msg interface{}) error {
 
 	switch port {
-	case StartControlPort:
+	case module.ControlPort:
 		_ = handle(StartOutPort, msg)
 
-	case StartSettingsPort:
+	case module.SettingsPort:
 		in, ok := msg.(StartSettings)
 		if !ok {
 			return fmt.Errorf("invalid settings")
 		}
 		t.settings = in
+		if t.settings.Auto {
+			return handle(StartOutPort, in.Context)
+		}
 	}
 	return nil
 }
@@ -63,10 +65,9 @@ func (t *Start) Handle(ctx context.Context, handle module.Handler, port string, 
 func (t *Start) Ports() []module.NodePort {
 	return []module.NodePort{
 		{
-			Name:          StartSettingsPort,
+			Name:          module.SettingsPort,
 			Label:         "Settings",
 			Source:        true,
-			Settings:      true,
 			Configuration: t.settings,
 		},
 		{
@@ -77,9 +78,8 @@ func (t *Start) Ports() []module.NodePort {
 			Configuration: new(StartContext),
 		},
 		{
-			Name:    StartControlPort,
-			Label:   "Control",
-			Control: true,
+			Name:  module.ControlPort,
+			Label: "Control",
 			Configuration: StartControl{
 				Context: t.settings.Context,
 			},
