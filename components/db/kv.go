@@ -6,8 +6,8 @@ import (
 	"fmt"
 	cmap "github.com/orcaman/concurrent-map/v2"
 	"github.com/spyzhov/ajson"
+	"github.com/swaggest/jsonschema-go"
 	"github.com/tiny-systems/module/module"
-	"github.com/tiny-systems/module/pkg/jsonschema-go"
 	"github.com/tiny-systems/module/registry"
 )
 
