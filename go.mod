@@ -17,7 +17,7 @@ require (
 	github.com/spf13/viper v1.15.0
 	github.com/spyzhov/ajson v0.9.0
 	github.com/swaggest/jsonschema-go v0.3.70
-	github.com/tiny-systems/module v0.1.64
+	github.com/tiny-systems/module v0.1.65
 	github.com/wneessen/go-mail v0.3.9
 	go.uber.org/atomic v1.11.0
 	golang.org/x/oauth2 v0.13.0
