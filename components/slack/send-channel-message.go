@@ -85,7 +85,7 @@ func (t *ChannelSender) Handle(ctx context.Context, responseHandler module.Handl
 
 	if err != nil {
 		if t.settings.EnableErrorPort {
-			return responseHandler(PortError, SendSlackChannelError{
+			return responseHandler(ctx, PortError, SendSlackChannelError{
 				Context: in.Context,
 				Send:    in.Message,
 				Error:   err.Error(),
@@ -95,7 +95,7 @@ func (t *ChannelSender) Handle(ctx context.Context, responseHandler module.Handl
 	}
 
 	if err == nil && t.settings.EnableSuccessPort {
-		return responseHandler(PortSuccess, SendSlackChannelSuccess{
+		return responseHandler(ctx, PortSuccess, SendSlackChannelSuccess{
 			Context: in.Context,
 			Sent:    in.Message,
 		})

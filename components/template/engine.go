@@ -14,6 +14,7 @@ const (
 	EngineComponent = "template-engine"
 	EngineInPort    = "input"
 	EngineOutPort   = "output"
+	EngineErrorPort = "error"
 )
 
 type Context any
@@ -25,8 +26,15 @@ type Template struct {
 }
 
 type Settings struct {
-	Templates []Template `json:"templates,omitempty" required:"true" title:"Templates" minItems:"1" uniqueItems:"true" propertyOrder:"1"`
-	Partials  []Template `json:"partials,omitempty" required:"true" title:"Partials" description:"All partials being loaded with each template" minItems:"0" uniqueItems:"true" propertyOrder:"2"`
+	EnableErrorPort bool `json:"enableErrorPort" required:"true" title:"Enable Error Port" description:"If error happen during mail send, error port will emit an error message" propertyOrder:"1" tab:"Settings"`
+
+	Templates []Template `json:"templates,omitempty" required:"true" title:"Templates" minItems:"1" uniqueItems:"true" propertyOrder:"1" tab:"Templates"`
+	Partials  []Template `json:"partials,omitempty" required:"true" title:"Partials" description:"All partials being loaded with each template" minItems:"0" uniqueItems:"true" propertyOrder:"1" tab:"Partials"`
+}
+
+type Error struct {
+	Context Context `json:"context"`
+	Error   string  `json:"error"`
 }
 
 type Input struct {
@@ -171,14 +179,27 @@ func (h *Engine) Handle(ctx context.Context, handler module.Handler, port string
 		buf := &bytes.Buffer{}
 		t, ok := h.templateSet[in.Template]
 		if !ok {
-			return fmt.Errorf("template not found")
-		}
-
-		if err := t.ExecuteTemplate(buf, in.Template, in.RenderContext); err != nil {
+			err := fmt.Errorf("template not found")
+			if h.settings.EnableErrorPort {
+				_ = handler(ctx, EngineErrorPort, Error{
+					Context: in.Context,
+					Error:   err.Error(),
+				})
+			}
 			return err
 		}
 
-		return handler(EngineOutPort, Output{
+		if err := t.ExecuteTemplate(buf, in.Template, in.RenderContext); err != nil {
+			if h.settings.EnableErrorPort {
+				_ = handler(ctx, EngineErrorPort, Error{
+					Context: in.Context,
+					Error:   err.Error(),
+				})
+			}
+			return err
+		}
+
+		return handler(ctx, EngineOutPort, Output{
 			Content:       buf.String(),
 			RenderContext: in.RenderContext,
 			Context:       in.Context,
@@ -191,7 +212,7 @@ func (h *Engine) Handle(ctx context.Context, handler module.Handler, port string
 }
 
 func (h *Engine) Ports() []module.NodePort {
-	return []module.NodePort{
+	ports := []module.NodePort{
 		{
 			Name:          EngineInPort,
 			Label:         "Input",
@@ -208,11 +229,20 @@ func (h *Engine) Ports() []module.NodePort {
 		{
 			Name:          module.SettingsPort,
 			Label:         "Settings",
-			Position:      module.Bottom,
 			Source:        true,
 			Configuration: h.settings,
 		},
 	}
+	if h.settings.EnableErrorPort {
+		ports = append(ports, module.NodePort{
+			Position:      module.Bottom,
+			Name:          EngineErrorPort,
+			Label:         "Error",
+			Source:        false,
+			Configuration: Error{},
+		})
+	}
+	return ports
 }
 
 func (h *Engine) Instance() module.Component {

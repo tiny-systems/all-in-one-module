@@ -117,7 +117,7 @@ func (s *Scheduler) Handle(ctx context.Context, handler module.Handler, port str
 	}
 
 	if s.settings.EnableAckPort {
-		if err := handler(SchedulerAckPort, SchedulerTaskAck{
+		if err := handler(ctx, SchedulerAckPort, SchedulerTaskAck{
 			Task:        in.Task,
 			Context:     in.Context,
 			ScheduledIn: scheduledIn,
@@ -127,7 +127,7 @@ func (s *Scheduler) Handle(ctx context.Context, handler module.Handler, port str
 	}
 
 	s.addOrUpdateTask(t.ID, t.Schedule, t.DateTime.Sub(time.Now()), func() {
-		_ = handler(SchedulerOutPort, SchedulerOutMessage{
+		_ = handler(ctx, SchedulerOutPort, SchedulerOutMessage{
 			Task:    in.Task,
 			Context: in.Context,
 		})

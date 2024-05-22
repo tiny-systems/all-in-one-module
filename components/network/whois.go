@@ -70,7 +70,7 @@ func (t *Whois) Handle(ctx context.Context, handler module.Handler, port string,
 	}
 	resultRaw, err := whois.Whois(in.DomainName)
 	if err != nil {
-		return handler(DomainWhoisErrorPort, DomainWhoisError{
+		return handler(ctx, DomainWhoisErrorPort, DomainWhoisError{
 			ErrorType:  ErrFetch.Error(),
 			Context:    in.Context,
 			DomainName: in.DomainName,
@@ -79,7 +79,7 @@ func (t *Whois) Handle(ctx context.Context, handler module.Handler, port string,
 	}
 	result, err := whoisparser.Parse(resultRaw)
 	if err != nil {
-		return handler(DomainWhoisErrorPort, DomainWhoisError{
+		return handler(ctx, DomainWhoisErrorPort, DomainWhoisError{
 			ErrorType:  ErrParse.Error(),
 			Context:    in.Context,
 			DomainName: in.DomainName,
@@ -91,7 +91,7 @@ func (t *Whois) Handle(ctx context.Context, handler module.Handler, port string,
 		DomainName: in.DomainName,
 		Context:    in.Context,
 	}
-	return handler(DomainWhoisSuccessPort, resp)
+	return handler(ctx, DomainWhoisSuccessPort, resp)
 }
 
 func (t *Whois) Ports() []module.NodePort {

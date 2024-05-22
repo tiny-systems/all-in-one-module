@@ -26,7 +26,7 @@ func TestSplit_Handle(t1 *testing.T) {
 			name:    "test invalid message",
 			wantErr: true,
 			handleFunc: func(t *testing.T, handle h) error {
-				return handle(context.Background(), func(port string, data interface{}) error {
+				return handle(context.Background(), func(ctx context.Context, port string, data interface{}) error {
 					// should not be triggered cause message is invalid
 					t.Error("output handler should not be triggered if income message is invalid")
 					return nil
@@ -38,7 +38,7 @@ func TestSplit_Handle(t1 *testing.T) {
 			name:    "OK empty message",
 			wantErr: false,
 			handleFunc: func(t *testing.T, handle h) error {
-				return handle(context.Background(), func(port string, data interface{}) error {
+				return handle(context.Background(), func(ctx context.Context, port string, data interface{}) error {
 					// should not be triggered cause message is invalid
 					t.Error("output handler should not be triggered if income message is empty")
 					return nil
@@ -64,7 +64,7 @@ func TestSplit_Handle(t1 *testing.T) {
 					}
 				}()
 
-				var resp = func(port string, data interface{}) error {
+				var resp = func(ctx context.Context, port string, data interface{}) error {
 					counter++
 					if port != SplitOutPort {
 						t1.Fatalf("invalid output port: %v", port)

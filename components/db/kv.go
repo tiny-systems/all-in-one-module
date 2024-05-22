@@ -130,7 +130,7 @@ func (k *KeyValueStore) Handle(ctx context.Context, output module.Handler, port 
 		}
 
 		if k.settings.EnableStoreResultPort {
-			output(PortStoreResult, KeyValueStoreResult{
+			output(ctx, PortStoreResult, KeyValueStoreResult{
 				Context:   in.Context,
 				Document:  in.Document,
 				Operation: in.Operation,
@@ -171,7 +171,7 @@ func (k *KeyValueStore) Handle(ctx context.Context, output module.Handler, port 
 			if err = json.Unmarshal(data, &result); err != nil {
 				return fmt.Errorf("unable to decode result: %v", err)
 			}
-			return output(PortQueryResult, KeyValueQueryResult{
+			return output(ctx, PortQueryResult, KeyValueQueryResult{
 				Query:    in.Query,
 				Context:  in.Context,
 				Document: result,
@@ -180,7 +180,7 @@ func (k *KeyValueStore) Handle(ctx context.Context, output module.Handler, port 
 		}
 	}
 
-	return output(PortQueryResult, KeyValueQueryResult{
+	return output(ctx, PortQueryResult, KeyValueQueryResult{
 		Query:   in.Query,
 		Context: in.Context,
 		Found:   false,

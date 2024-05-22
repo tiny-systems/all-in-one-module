@@ -47,7 +47,7 @@ func (t *Start) Handle(ctx context.Context, handle module.Handler, port string, 
 
 	switch port {
 	case module.ControlPort:
-		_ = handle(StartOutPort, msg)
+		_ = handle(ctx, StartOutPort, msg)
 
 	case module.SettingsPort:
 		in, ok := msg.(StartSettings)
@@ -56,7 +56,7 @@ func (t *Start) Handle(ctx context.Context, handle module.Handler, port string, 
 		}
 		t.settings = in
 		if t.settings.Auto {
-			return handle(StartOutPort, in.Context)
+			return handle(ctx, StartOutPort, in.Context)
 		}
 	}
 	return nil

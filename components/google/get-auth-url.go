@@ -56,7 +56,7 @@ func (a *GetAuthUrl) Handle(ctx context.Context, output module.Handler, port str
 		} else {
 			opts = append(opts, oauth2.AccessTypeOffline)
 		}
-		return output("out", GetAuthUrlOutMessage{
+		return output(ctx, "out", GetAuthUrlOutMessage{
 			Context: in.Context,
 			AuthUrl: config.AuthCodeURL("state-token", opts...),
 		})

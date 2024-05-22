@@ -53,7 +53,7 @@ func (t *Delay) Handle(ctx context.Context, handler module.Handler, port string,
 	}
 
 	time.Sleep(time.Millisecond * time.Duration(in.Delay))
-	_ = handler(DelayOutPort, DelayOutMessage{
+	_ = handler(ctx, DelayOutPort, DelayOutMessage{
 		Context: in.Context,
 		Delay:   in.Delay,
 	})

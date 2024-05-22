@@ -89,7 +89,7 @@ func (h Client) Handle(ctx context.Context, handler module.Handler, port string,
 	if err != nil {
 		return err
 	}
-	return handler("response", ClientResponse{
+	return handler(ctx, "response", ClientResponse{
 		Response: string(b),
 		Request:  in,
 	})

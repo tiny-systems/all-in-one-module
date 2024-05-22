@@ -41,7 +41,7 @@ func (t *Modify) GetInfo() module.ComponentInfo {
 
 func (t *Modify) Handle(ctx context.Context, handler module.Handler, port string, msg interface{}) error {
 	if in, ok := msg.(ModifyInMessage); ok {
-		return handler(ModifyOutPort, ModifyOutMessage{
+		return handler(ctx, ModifyOutPort, ModifyOutMessage{
 			Context: in.Context,
 		})
 	}

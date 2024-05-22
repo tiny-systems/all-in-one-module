@@ -2,6 +2,7 @@ package http
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/clbanning/mxj/v2"
 	"github.com/google/uuid"
@@ -59,7 +60,10 @@ type Server struct {
 	cancelFunc     context.CancelFunc
 	cancelFuncLock *sync.Mutex
 
-	startErr *atomic.Error
+	runLock *sync.Mutex
+
+	startContext ServerStartContext
+	startErr     *atomic.Error
 	//
 }
 
@@ -70,6 +74,7 @@ func (h *Server) Instance() module.Component {
 		publicListenAddr:     []string{},
 		publicListenAddrLock: &sync.Mutex{},
 		cancelFuncLock:       &sync.Mutex{},
+		runLock:              &sync.Mutex{},
 		//
 		settingsLock: &sync.Mutex{},
 		//
@@ -177,6 +182,7 @@ func (h *Server) stop() error {
 		return nil
 	}
 	h.cancelFunc()
+
 	return nil
 }
 
@@ -194,6 +200,14 @@ func (h *Server) isRunning() bool {
 }
 
 func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Handler) error {
+	//
+	h.startContext = msg.Context
+
+	if err := h.stop(); err != nil {
+		return err
+	}
+	h.runLock.Lock()
+	defer h.runLock.Unlock()
 
 	e := echo.New()
 	e.HideBanner = false
@@ -201,10 +215,10 @@ func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Hand
 
 	h.e = e
 
-	ctx, cancel := context.WithCancel(ctx)
-	h.setCancelFunc(cancel)
+	serverCtx, cancel := context.WithCancel(ctx)
 
-	h.contexts = ttlmap.New(ctx, msg.ReadTimeout+msg.ReadTimeout)
+	h.setCancelFunc(cancel)
+	h.contexts = ttlmap.New(ctx, msg.ReadTimeout*2)
 
 	h.e.Any("*", func(c echo.Context) error {
 		id, err := uuid.NewUUID()
@@ -214,6 +228,7 @@ func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Hand
 
 		idStr := id.String()
 		requestResult := ServerRequest{
+			Context:       msg.Context,
 			RequestID:     idStr,
 			Host:          c.Request().Host,
 			Method:        c.Request().Method,
@@ -281,6 +296,7 @@ func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Hand
 				select {
 				case <-c.Request().Context().Done():
 					return
+
 				case <-ctx.Done():
 					return
 
@@ -309,7 +325,7 @@ func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Hand
 			}
 		}()
 
-		if err = handler(ServerRequestPort, requestResult); err != nil {
+		if err = handler(c.Request().Context(), ServerRequestPort, requestResult); err != nil {
 			return err
 		}
 		<-doneCh
@@ -335,7 +351,11 @@ func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Hand
 	}
 
 	go func() {
-		h.startErr.Store(h.e.Start(listenAddr))
+		err := h.e.Start(listenAddr)
+		if errors.Is(err, http.ErrServerClosed) {
+			return
+		}
+		h.startErr.Store(err)
 	}()
 
 	time.Sleep(time.Millisecond * 1500)
@@ -349,16 +369,23 @@ func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Hand
 			}
 		}
 	}
-	// send status that we run
-	_ = h.sendStatus(handler)
-	<-ctx.Done()
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	// send status that we run
+	_ = h.sendStatus(ctx, msg.Context, handler)
+	// ask to reconcile (redraw the component)
+	_ = handler(ctx, module.ReconcilePort, nil)
+
+	<-serverCtx.Done()
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
+
 	h.e.Shutdown(shutdownCtx)
 	h.setCancelFunc(nil)
+
 	// send status when we stopped
-	_ = h.sendStatus(handler)
+	_ = h.sendStatus(ctx, msg.Context, handler)
+	// ask to reconcile (redraw the component)
+	_ = handler(ctx, module.ReconcilePort, nil)
 
 	return h.startErr.Load()
 }
@@ -389,15 +416,10 @@ func (h *Server) Handle(ctx context.Context, handler module.Handler, port string
 
 		switch msg.(type) {
 		case ServerStartControl:
-			go func() {
-				time.Sleep(time.Second * 3)
-				_ = handler(module.ReconcilePort, nil)
-			}()
 			return h.start(ctx, h.startSettings, handler)
 
 		case ServerStopControl:
 			err := h.stop()
-			_ = handler(module.ReconcilePort, nil)
 			return err
 		}
 
@@ -411,25 +433,18 @@ func (h *Server) Handle(ctx context.Context, handler module.Handler, port string
 		h.settings = in
 		h.settingsLock.Unlock()
 
-		// send status when we applied settings
-		return h.sendStatus(handler)
+		return nil
 
 	case ServerStartPort:
 		in, ok := msg.(ServerStart)
 		if !ok {
 			return fmt.Errorf("invalid start message")
 		}
-
-		go func() {
-			time.Sleep(time.Second * 3)
-			_ = handler(module.ReconcilePort, nil)
-		}()
 		// give time to fail
 		return h.start(ctx, in, handler)
 
 	case ServerStopPort:
 		err := h.stop()
-		_ = handler(module.ReconcilePort, nil)
 		return err
 
 	case ServerResponsePort:
@@ -548,8 +563,12 @@ func (h *Server) getStatus() ServerStatus {
 	}
 }
 
-func (h *Server) sendStatus(handler module.Handler) error {
-	return handler(ServerStatusPort, ServerStatus{
+func (h *Server) sendStatus(ctx context.Context, start ServerStartContext, handler module.Handler) error {
+	if !h.settings.EnableStatusPort {
+		return nil
+	}
+	return handler(ctx, ServerStatusPort, ServerStatus{
+		Context:    start,
 		ListenAddr: h.getPublicListerAddr(),
 		IsRunning:  h.isRunning(),
 	})

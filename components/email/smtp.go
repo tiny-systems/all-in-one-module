@@ -110,7 +110,7 @@ func (t *SmtpSender) Handle(ctx context.Context, responseHandler module.Handler,
 
 	if err != nil {
 		if t.settings.EnableErrorPort {
-			return responseHandler(PortError, SendMessageError{
+			return responseHandler(ctx, PortError, SendMessageError{
 				Context:   sendMsg.Context,
 				Email:     sendMsg.Email,
 				Error:     err.Error(),
@@ -123,7 +123,7 @@ func (t *SmtpSender) Handle(ctx context.Context, responseHandler module.Handler,
 	err = client.DialWithContext(ctx)
 	if err != nil {
 		if t.settings.EnableErrorPort {
-			return responseHandler(PortError, SendMessageError{
+			return responseHandler(ctx, PortError, SendMessageError{
 				Context:   sendMsg.Context,
 				Email:     sendMsg.Email,
 				Error:     err.Error(),
@@ -149,7 +149,7 @@ func (t *SmtpSender) Handle(ctx context.Context, responseHandler module.Handler,
 	err = client.Send(m)
 	if err != nil {
 		if t.settings.EnableErrorPort {
-			return responseHandler(PortError, SendMessageError{
+			return responseHandler(ctx, PortError, SendMessageError{
 				Context:   sendMsg.Context,
 				Email:     sendMsg.Email,
 				Error:     err.Error(),
@@ -160,7 +160,7 @@ func (t *SmtpSender) Handle(ctx context.Context, responseHandler module.Handler,
 	}
 
 	if err == nil && t.settings.EnableSuccessPort {
-		return responseHandler(PortSuccess, SendMessageSuccess{
+		return responseHandler(ctx, PortSuccess, SendMessageSuccess{
 			Context:   sendMsg.Context,
 			Email:     sendMsg.Email,
 			MessageID: messageID.String(),

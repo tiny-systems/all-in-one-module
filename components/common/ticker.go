@@ -63,7 +63,7 @@ func (t *Ticker) emit(ctx context.Context, handler module.Handler) error {
 		case <-ticker.C:
 
 			atomic.AddInt64(&t.counter, 1)
-			_ = handler(TickerOutPort, t.settings.Context)
+			_ = handler(ctx, TickerOutPort, t.settings.Context)
 		case <-ctx.Done():
 			return ctx.Err()
 		}

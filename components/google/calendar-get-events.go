@@ -67,7 +67,7 @@ func (c *CalendarGetEvents) GetInfo() module.ComponentInfo {
 	}
 }
 
-func (c *CalendarGetEvents) Handle(ctx context.Context, output module.Handler, port string, msg interface{}) error {
+func (c *CalendarGetEvents) Handle(ctx context.Context, handler module.Handler, port string, msg interface{}) error {
 	if port == module.SettingsPort {
 		in, ok := msg.(CalendarGetEventsSettings)
 		if !ok {
@@ -84,7 +84,7 @@ func (c *CalendarGetEvents) Handle(ctx context.Context, output module.Handler, p
 	events, err := c.getEvents(ctx, req)
 
 	if err != nil && c.settings.EnableErrorPort {
-		_ = output("error", CalendarGetEventsError{
+		_ = handler(ctx, "error", CalendarGetEventsError{
 			Context: req.Context,
 			Request: req.Request,
 			Error:   err.Error(),
@@ -92,7 +92,7 @@ func (c *CalendarGetEvents) Handle(ctx context.Context, output module.Handler, p
 		return err
 	}
 
-	return output("success", CalendarGetEventSuccess{
+	return handler(ctx, "success", CalendarGetEventSuccess{
 		Request: req.Request,
 		Context: req.Context,
 		Results: *events,

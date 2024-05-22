@@ -46,7 +46,7 @@ func (t *Split) GetInfo() module.ComponentInfo {
 func (t *Split) Handle(ctx context.Context, handler module.Handler, port string, msg interface{}) error {
 	if in, ok := msg.(SplitInMessage); ok {
 		for _, item := range in.Array {
-			if err := handler(SplitOutPort, SplitOutMessage{
+			if err := handler(ctx, SplitOutPort, SplitOutMessage{
 				Context: in.Context,
 				Item:    item,
 			}); err != nil {

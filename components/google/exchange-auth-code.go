@@ -50,7 +50,7 @@ func (a *ExchangeAuthCode) Handle(ctx context.Context, output module.Handler, po
 			return err
 		}
 
-		return output("out", ExchangeAuthCodeOutMessage{
+		return output(ctx, "out", ExchangeAuthCodeOutMessage{
 			Context: in.Context,
 			Token: Token{
 				AccessToken:  token.AccessToken,

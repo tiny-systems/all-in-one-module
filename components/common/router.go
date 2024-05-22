@@ -102,13 +102,13 @@ func (t *Router) Handle(ctx context.Context, handler module.Handler, port string
 	if in, ok := msg.(RouterInMessage); ok {
 		for _, condition := range in.Conditions {
 			if condition.Condition {
-				return handler(getPortNameFromRoute(condition.RouteName.Value), RouterOutMessage{
+				return handler(ctx, getPortNameFromRoute(condition.RouteName.Value), RouterOutMessage{
 					Context: in.Context,
 					Route:   condition.RouteName.Value,
 				})
 			}
 		}
-		return handler(RouterDefaultPort, RouterOutMessage{
+		return handler(ctx, RouterDefaultPort, RouterOutMessage{
 			Context: in.Context,
 			Route:   RouterDefaultPort,
 		})
