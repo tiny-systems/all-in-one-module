@@ -151,14 +151,15 @@ func (h *Engine) Handle(ctx context.Context, handler module.Handler, port string
 		}
 
 		for _, t := range in.Templates {
-
 			tmpl, err := template.New(t.Name).Funcs(funcMap).Parse(t.Content)
 			if err != nil {
+				h.error(ctx, err, in, handler)
 				return err
 			}
 			for _, p := range in.Partials {
 				_, err = tmpl.New(p.Name).Parse(p.Content)
 				if err != nil {
+					h.error(ctx, err, in, handler)
 					return err
 				}
 			}
@@ -180,12 +181,7 @@ func (h *Engine) Handle(ctx context.Context, handler module.Handler, port string
 		t, ok := h.templateSet[in.Template]
 		if !ok {
 			err := fmt.Errorf("template not found")
-			if h.settings.EnableErrorPort {
-				_ = handler(ctx, EngineErrorPort, Error{
-					Context: in.Context,
-					Error:   err.Error(),
-				})
-			}
+			h.error(ctx, err, in.Context, handler)
 			return err
 		}
 
@@ -211,6 +207,14 @@ func (h *Engine) Handle(ctx context.Context, handler module.Handler, port string
 	return nil
 }
 
+func (h *Engine) error(ctx context.Context, err error, contextMsg Context, handler module.Handler) {
+	if h.settings.EnableErrorPort {
+		_ = handler(ctx, EngineErrorPort, Error{
+			Context: contextMsg,
+			Error:   err.Error(),
+		})
+	}
+}
 func (h *Engine) Ports() []module.NodePort {
 	ports := []module.NodePort{
 		{
