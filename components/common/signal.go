@@ -47,7 +47,11 @@ func (t *Start) Handle(ctx context.Context, handle module.Handler, port string, 
 
 	switch port {
 	case module.ControlPort:
-		_ = handle(ctx, StartOutPort, msg)
+		in, ok := msg.(StartControl)
+		if !ok {
+			return fmt.Errorf("invalid input msg")
+		}
+		_ = handle(ctx, StartOutPort, in.Context)
 
 	case module.SettingsPort:
 		in, ok := msg.(StartSettings)
