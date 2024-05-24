@@ -21,12 +21,12 @@ type Context any
 type RenderContext any
 
 type Template struct {
-	Name    string `json:"name" required:"true" title:"File name" Description:"e.g. footer.tmpl" propertyOrder:"1"`
-	Content string `json:"content" required:"true" title:"Template" format:"textarea" propertyOrder:"2"`
+	Name    string `json:"name,omitempty" required:"true" title:"File name" Description:"e.g. footer.tmpl" propertyOrder:"1"`
+	Content string `json:"content,omitempty" required:"true" title:"Template" format:"textarea" propertyOrder:"2"`
 }
 
 type Settings struct {
-	EnableErrorPort bool `json:"enableErrorPort" required:"true" title:"Enable Error Port" description:"If error happen during mail send, error port will emit an error message" propertyOrder:"1" tab:"Settings"`
+	EnableErrorPort bool `json:"enableErrorPort,omitempty" required:"true" title:"Enable Error Port" description:"If error happen during mail send, error port will emit an error message" propertyOrder:"1" tab:"Settings"`
 
 	Templates []Template `json:"templates,omitempty" required:"true" title:"Templates" minItems:"1" uniqueItems:"true" propertyOrder:"1" tab:"Templates"`
 	Partials  []Template `json:"partials,omitempty" required:"true" title:"Partials" description:"All partials being loaded with each template" minItems:"0" uniqueItems:"true" propertyOrder:"1" tab:"Partials"`
@@ -38,9 +38,9 @@ type Error struct {
 }
 
 type Input struct {
-	Context       Context       `json:"context" configurable:"true" required:"true" title:"Context" description:"Arbitrary message to be send alongside with rendered content" propertyOrder:"1"`
-	RenderContext RenderContext `json:"renderContext" configurable:"true" required:"true" title:"Render context" description:"Data being used to render the template" propertyOrder:"2"`
-	Template      string        `json:"template" required:"true" title:"Template" description:"Template to render" propertyOrder:"3"`
+	Context       Context       `json:"context,omitempty" configurable:"true" title:"Context" description:"Arbitrary message to be send alongside with rendered content" propertyOrder:"1"`
+	RenderContext RenderContext `json:"renderContext,omitempty" configurable:"true" title:"Render context" description:"Data being used to render the template" propertyOrder:"2"`
+	Template      string        `json:"template,omitempty" required:"true" title:"Template" description:"Template to render" propertyOrder:"3"`
 }
 
 type Output struct {
