@@ -35,7 +35,7 @@ func (r *RouteName) UnmarshalJSON(data []byte) error {
 func (r RouteName) JSONSchema() (jsonschema.Schema, error) {
 	name := jsonschema.Schema{}
 	name.AddType(jsonschema.String)
-	name.WithTitle("Route name")
+	name.WithTitle("Route")
 	name.WithDefault(r.Value)
 	enums := make([]interface{}, len(r.Options))
 	for k, v := range r.Options {
