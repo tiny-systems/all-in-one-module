@@ -112,6 +112,12 @@ func (a *GetAuthUrl) Ports() []module.NodePort {
 			},
 		},
 		{
+			Name:          module.SettingsPort,
+			Label:         "Settings",
+			Configuration: GetAuthUrlSettings{},
+			Source:        true,
+		},
+		{
 			Source:        false,
 			Name:          GetAuthUrlResponsePort,
 			Label:         "Response",
