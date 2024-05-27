@@ -54,6 +54,15 @@ func (a *GetAuthUrl) GetInfo() module.ComponentInfo {
 
 func (a *GetAuthUrl) Handle(ctx context.Context, output module.Handler, port string, msg interface{}) error {
 
+	if port == module.SettingsPort {
+		in, ok := msg.(GetAuthUrlSettings)
+		if !ok {
+			return fmt.Errorf("invalid settings")
+		}
+		a.settings = in
+		return nil
+	}
+
 	if port != GetAuthUrlRequestPort {
 		return fmt.Errorf("unknown port %s", port)
 	}
