@@ -121,7 +121,7 @@ func (g *GetCalendars) Ports() []module.NodePort {
 		{
 			Name:          module.SettingsPort,
 			Label:         "Settings",
-			Configuration: GetAuthUrlSettings{},
+			Configuration: GetCalendarsSettings{},
 			Source:        true,
 		},
 		{
