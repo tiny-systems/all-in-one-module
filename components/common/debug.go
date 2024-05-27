@@ -13,6 +13,10 @@ const (
 
 type DebugContext any
 
+type DebugContextIn struct {
+	Context DebugContext `json:"context" title:"Context"`
+}
+
 type Debug struct {
 }
 
@@ -35,7 +39,7 @@ func (t *Debug) Ports() []module.NodePort {
 			Name:          DebugInPort,
 			Label:         "In",
 			Source:        true,
-			Configuration: new(DebugContext),
+			Configuration: DebugContextIn{},
 			Position:      module.Left,
 		},
 	}
