@@ -8,7 +8,11 @@ import (
 	"golang.org/x/oauth2/google"
 )
 
-const ExchangeAutCodeComponent = "google_exchange_auth_code"
+const (
+	ExchangeAutCodeComponent = "google_exchange_auth_code"
+	ExchangeAuthCodeInPort   = "in"
+	ExchangeAuthCodeOutPort  = "out"
+)
 
 type ExchangeAuthCodeInContext any
 
@@ -36,7 +40,7 @@ func (a *ExchangeAuthCode) GetInfo() module.ComponentInfo {
 }
 
 func (a *ExchangeAuthCode) Handle(ctx context.Context, output module.Handler, port string, msg interface{}) error {
-	if port == "in" {
+	if port == ExchangeAuthCodeInPort {
 		in, ok := msg.(ExchangeAuthCodeInMessage)
 		if !ok {
 			return fmt.Errorf("invalid input message")
@@ -50,7 +54,7 @@ func (a *ExchangeAuthCode) Handle(ctx context.Context, output module.Handler, po
 			return err
 		}
 
-		return output(ctx, "out", ExchangeAuthCodeOutMessage{
+		return output(ctx, ExchangeAuthCodeOutPort, ExchangeAuthCodeOutMessage{
 			Context: in.Context,
 			Token: Token{
 				AccessToken:  token.AccessToken,
@@ -67,14 +71,14 @@ func (a *ExchangeAuthCode) Ports() []module.NodePort {
 	return []module.NodePort{
 		{
 			Source:        true,
-			Name:          "in",
+			Name:          ExchangeAuthCodeInPort,
 			Label:         "In",
 			Position:      module.Left,
 			Configuration: ExchangeAuthCodeInMessage{},
 		},
 		{
 			Source:        false,
-			Name:          "out",
+			Name:          ExchangeAuthCodeOutPort,
 			Label:         "Out",
 			Position:      module.Right,
 			Configuration: ExchangeAuthCodeOutMessage{},

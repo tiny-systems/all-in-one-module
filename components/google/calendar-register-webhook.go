@@ -75,6 +75,11 @@ func (h *CalendarRegisterWebhook) Handle(ctx context.Context, handler module.Han
 		h.settings = in
 		return nil
 	}
+
+	if port != "request" {
+		return fmt.Errorf("unknown port %s", port)
+	}
+
 	return nil
 }
 
