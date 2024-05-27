@@ -119,6 +119,12 @@ func (c *GetCalendars) getCalendars(ctx context.Context, req GetCalendarsRequest
 func (g *GetCalendars) Ports() []module.NodePort {
 	ports := []module.NodePort{
 		{
+			Name:          module.SettingsPort,
+			Label:         "Settings",
+			Configuration: GetAuthUrlSettings{},
+			Source:        true,
+		},
+		{
 			Source:        true,
 			Name:          GetCalendarsRequestPort,
 			Label:         "Request",
