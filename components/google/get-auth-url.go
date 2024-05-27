@@ -9,7 +9,12 @@ import (
 	"golang.org/x/oauth2/google"
 )
 
-const GetAuthUrlComponent = "google_get_auth_url"
+const (
+	GetAuthUrlComponent    = "google_get_auth_url"
+	GetAuthUrlRequestPort  = "request"
+	GetAuthUrlResponsePort = "response"
+	GetAuthUrlErrorPort    = "error"
+)
 
 type GetAuthUrlInContext any
 
@@ -20,12 +25,22 @@ type GetAuthUrlInMessage struct {
 	ApprovalForce bool                `json:"approvalForce" title:"ApprovalForce" required:"true" propertyOrder:"4"`
 }
 
+type GetAuthUrlSettings struct {
+	EnableErrorPort bool `json:"enableErrorPort" required:"true" title:"Enable Error Port" description:"If request may fail, error port will emit an error message"`
+}
+
+type GetAuthUrlErrorMessage struct {
+	Request GetAuthUrlInMessage `json:"request"`
+	Error   string              `json:"error"`
+}
+
 type GetAuthUrlOutMessage struct {
-	Context GetAuthUrlInContext `json:"context"`
+	Request GetAuthUrlInMessage `json:"request"`
 	AuthUrl string              `json:"authUrl" format:"uri"`
 }
 
 type GetAuthUrl struct {
+	settings GetAuthUrlSettings
 }
 
 func (a *GetAuthUrl) GetInfo() module.ComponentInfo {
@@ -38,38 +53,58 @@ func (a *GetAuthUrl) GetInfo() module.ComponentInfo {
 }
 
 func (a *GetAuthUrl) Handle(ctx context.Context, output module.Handler, port string, msg interface{}) error {
-	if port == "in" {
-		in, ok := msg.(GetAuthUrlInMessage)
-		if !ok {
-			return fmt.Errorf("invalid input message")
-		}
-		config, err := google.ConfigFromJSON([]byte(in.Config.Credentials), in.Config.Scopes...)
-		if err != nil {
-			return fmt.Errorf("unable to parse client secret file to config: %v", err)
-		}
-		var opts []oauth2.AuthCodeOption
-		if in.ApprovalForce {
-			opts = append(opts, oauth2.ApprovalForce)
-		}
-		if in.AccessType == "online" {
-			opts = append(opts, oauth2.AccessTypeOnline)
-		} else {
-			opts = append(opts, oauth2.AccessTypeOffline)
-		}
-		return output(ctx, "out", GetAuthUrlOutMessage{
-			Context: in.Context,
-			AuthUrl: config.AuthCodeURL("state-token", opts...),
-		})
+
+	if port != GetAuthUrlRequestPort {
+		return fmt.Errorf("unknown port %s", port)
 	}
-	return nil
+	//
+	in, ok := msg.(GetAuthUrlInMessage)
+	if !ok {
+		return fmt.Errorf("invalid input message")
+	}
+	url, err := getAuthUrl(ctx, in)
+
+	if err != nil {
+		// check err port
+		if a.settings.EnableErrorPort {
+			return output(ctx, GetAuthUrlErrorPort, GetAuthUrlErrorMessage{
+				Request: in,
+				Error:   err.Error(),
+			})
+		}
+		return err
+	}
+
+	return output(ctx, GetAuthUrlResponsePort, GetAuthUrlOutMessage{
+		Request: in,
+		AuthUrl: url,
+	})
+}
+
+func getAuthUrl(_ context.Context, in GetAuthUrlInMessage) (string, error) {
+
+	config, err := google.ConfigFromJSON([]byte(in.Config.Credentials), in.Config.Scopes...)
+	if err != nil {
+		return "", fmt.Errorf("unable to parse client secret file to config: %v", err)
+	}
+	var opts []oauth2.AuthCodeOption
+	if in.ApprovalForce {
+		opts = append(opts, oauth2.ApprovalForce)
+	}
+	if in.AccessType == "online" {
+		opts = append(opts, oauth2.AccessTypeOnline)
+	} else {
+		opts = append(opts, oauth2.AccessTypeOffline)
+	}
+	return config.AuthCodeURL("state-token", opts...), nil
 }
 
 func (a *GetAuthUrl) Ports() []module.NodePort {
-	return []module.NodePort{
+	ports := []module.NodePort{
 		{
 			Source:   true,
-			Name:     "in",
-			Label:    "In",
+			Name:     GetAuthUrlRequestPort,
+			Label:    "Request",
 			Position: module.Left,
 			Configuration: GetAuthUrlInMessage{
 				AccessType:    "offline",
@@ -78,12 +113,24 @@ func (a *GetAuthUrl) Ports() []module.NodePort {
 		},
 		{
 			Source:        false,
-			Name:          "out",
-			Label:         "Out",
+			Name:          GetAuthUrlResponsePort,
+			Label:         "Response",
 			Position:      module.Right,
 			Configuration: GetAuthUrlOutMessage{},
 		},
 	}
+
+	if !a.settings.EnableErrorPort {
+		return ports
+	}
+
+	return append(ports, module.NodePort{
+		Position:      module.Bottom,
+		Name:          GetAuthUrlErrorPort,
+		Label:         "Error",
+		Source:        false,
+		Configuration: GetAuthUrlErrorMessage{},
+	})
 }
 
 func (a *GetAuthUrl) Instance() module.Component {

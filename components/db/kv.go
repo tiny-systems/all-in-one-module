@@ -70,9 +70,7 @@ type KeyValueStoreRequest struct {
 }
 
 type KeyValueStoreResult struct {
-	Context   KeyValueStoreRequestContext `json:"context"`
-	Document  KeyValueStoreDocument       `json:"document"`
-	Operation string                      `json:"operation"`
+	Request KeyValueStoreRequest `json:"request"`
 }
 
 func (k *KeyValueStore) GetInfo() module.ComponentInfo {
@@ -131,9 +129,7 @@ func (k *KeyValueStore) Handle(ctx context.Context, output module.Handler, port 
 
 		if k.settings.EnableStoreResultPort {
 			output(ctx, PortStoreResult, KeyValueStoreResult{
-				Context:   in.Context,
-				Document:  in.Document,
-				Operation: in.Operation,
+				Request: in,
 			})
 		}
 		return nil

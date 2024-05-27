@@ -7,7 +7,12 @@ import (
 	"github.com/tiny-systems/module/registry"
 )
 
-const CalendarRegisterWebhookComponent = "google_calendar_register_webhook"
+const (
+	CalendarRegisterWebhookComponent    = "google_calendar_register_webhook"
+	CalendarRegisterWebhookRequestPort  = "request"
+	CalendarRegisterWebhookResponsePort = "response"
+	CalendarRegisterWebhookErrorPort    = "error"
+)
 
 type CalendarRegisterChannel struct {
 	ID          string `json:"id" required:"true" title:"ID" description:"A UUID or similar unique string that identifies this channel."`
@@ -76,7 +81,7 @@ func (h *CalendarRegisterWebhook) Handle(ctx context.Context, handler module.Han
 		return nil
 	}
 
-	if port != "request" {
+	if port != CalendarRegisterWebhookRequestPort {
 		return fmt.Errorf("unknown port %s", port)
 	}
 
@@ -92,7 +97,7 @@ func (h *CalendarRegisterWebhook) Ports() []module.NodePort {
 			Source:        true,
 		},
 		{
-			Name:  "request",
+			Name:  CalendarRegisterWebhookRequestPort,
 			Label: "Request",
 			Configuration: CalendarRegisterWebhookRequest{
 				Channel: CalendarRegisterChannel{
@@ -106,8 +111,8 @@ func (h *CalendarRegisterWebhook) Ports() []module.NodePort {
 			Position: module.Left,
 		},
 		{
-			Name:          "success",
-			Label:         "Success",
+			Name:          CalendarRegisterWebhookResponsePort,
+			Label:         "Response",
 			Source:        false,
 			Position:      module.Right,
 			Configuration: CalendarRegisterWebhookSuccess{},
@@ -115,10 +120,10 @@ func (h *CalendarRegisterWebhook) Ports() []module.NodePort {
 	}
 	if h.settings.EnableErrorPort {
 		ports = append(ports, module.NodePort{
-			Position:      module.Bottom,
-			Name:          "error",
+			Name:          CalendarRegisterWebhookErrorPort,
 			Label:         "Error",
 			Source:        false,
+			Position:      module.Bottom,
 			Configuration: CalendarRegisterWebhookError{},
 		})
 	}

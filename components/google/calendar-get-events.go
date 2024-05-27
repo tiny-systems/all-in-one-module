@@ -13,24 +13,23 @@ import (
 )
 
 const (
-	CalendarGetEventsComponent = "google_calendar_get_events"
+	CalendarGetEventsComponent    = "google_calendar_get_events"
+	CalendarGetEventsRequestPort  = "request"
+	CalendarGetEventsResponsePort = "response"
+	CalendarGetEventsErrorPort    = "error"
 )
 
 type CalendarGetEventsContext any
 
-type CalendarGetEventsRequestPort struct {
-	Context CalendarGetEventsContext `json:"context" configurable:"true" title:"Context" description:"Arbitrary message to be send further" propertyOrder:"1"`
-	Request CalendarGetEventsRequest `json:"request" title:"Request" propertyOrder:"2"`
-}
-
 type CalendarGetEventsRequest struct {
-	CalendarId  string       `json:"calendarId" required:"true" default:"primary" minLength:"1" title:"Calendar ID" propertyOrder:"1"`
-	ShowDeleted bool         `json:"showDeleted" required:"true" title:"Show deleted events" default:"true" propertyOrder:"2"`
-	StartDate   time.Time    `json:"startDate" title:"Start date" propertyOrder:"3"`
-	EndDate     time.Time    `json:"endDate" title:"End date" propertyOrder:"4"`
-	SyncToken   string       `json:"syncToken" title:"Sync Token" propertyOrder:"5"`
-	Token       Token        `json:"token" required:"true" title:"Auth Token" propertyOrder:"6"`
-	Config      ClientConfig `json:"config" required:"true" title:"Client credentials" propertyOrder:"7"`
+	Context     CalendarGetEventsContext `json:"context" configurable:"true" title:"Context" description:"Arbitrary message to be send further" propertyOrder:"1"`
+	CalendarId  string                   `json:"calendarId" required:"true" default:"primary" minLength:"1" title:"Calendar ID" propertyOrder:"2"`
+	ShowDeleted bool                     `json:"showDeleted" required:"true" title:"Show deleted events" default:"true" propertyOrder:"3"`
+	StartDate   time.Time                `json:"startDate" title:"Start date" propertyOrder:"4"`
+	EndDate     time.Time                `json:"endDate" title:"End date" propertyOrder:"5"`
+	SyncToken   string                   `json:"syncToken" title:"Sync Token" propertyOrder:"6"`
+	Token       Token                    `json:"token" required:"true" title:"Auth Token" propertyOrder:"7"`
+	Config      ClientConfig             `json:"config" required:"true" title:"Client credentials" propertyOrder:"8"`
 }
 
 type ClientConfig struct {
@@ -39,13 +38,11 @@ type ClientConfig struct {
 }
 
 type CalendarGetEventsError struct {
-	Context CalendarGetEventsContext `json:"context"`
 	Request CalendarGetEventsRequest `json:"request"`
 	Error   string                   `json:"error"`
 }
 
 type CalendarGetEventSuccess struct {
-	Context CalendarGetEventsContext `json:"context"`
 	Request CalendarGetEventsRequest `json:"request"`
 	Results calendar.Events          `json:"results"`
 }
@@ -77,40 +74,43 @@ func (c *CalendarGetEvents) Handle(ctx context.Context, handler module.Handler, 
 		return nil
 	}
 
-	req, ok := msg.(CalendarGetEventsRequestPort)
+	if port != CalendarGetEventsRequestPort {
+		return fmt.Errorf("unknown port %s", CalendarGetEventsRequestPort)
+	}
+
+	req, ok := msg.(CalendarGetEventsRequest)
 	if !ok {
 		return fmt.Errorf("invalid message")
 	}
 	events, err := c.getEvents(ctx, req)
 
 	if err != nil && c.settings.EnableErrorPort {
-		_ = handler(ctx, "error", CalendarGetEventsError{
-			Context: req.Context,
-			Request: req.Request,
+		_ = handler(ctx, CalendarGetEventsErrorPort, CalendarGetEventsError{
+			Request: req,
 			Error:   err.Error(),
 		})
 		return err
 	}
 
-	return handler(ctx, "success", CalendarGetEventSuccess{
-		Request: req.Request,
-		Context: req.Context,
+	return handler(ctx, CalendarGetEventsResponsePort, CalendarGetEventSuccess{
+		Request: req,
 		Results: *events,
 	})
 
 }
 
-func (c *CalendarGetEvents) getEvents(ctx context.Context, req CalendarGetEventsRequestPort) (*calendar.Events, error) {
-	config, err := google.ConfigFromJSON([]byte(req.Request.Config.Credentials), calendar.CalendarReadonlyScope)
+func (c *CalendarGetEvents) getEvents(ctx context.Context, req CalendarGetEventsRequest) (*calendar.Events, error) {
+
+	config, err := google.ConfigFromJSON([]byte(req.Config.Credentials), req.Config.Scopes...)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse client secret file to config: %v", err)
 	}
 
 	client := config.Client(ctx, &oauth2.Token{
-		AccessToken:  req.Request.Token.AccessToken,
-		RefreshToken: req.Request.Token.RefreshToken,
-		Expiry:       req.Request.Token.Expiry,
-		TokenType:    req.Request.Token.TokenType,
+		AccessToken:  req.Token.AccessToken,
+		RefreshToken: req.Token.RefreshToken,
+		Expiry:       req.Token.Expiry,
+		TokenType:    req.Token.TokenType,
 	})
 
 	srv, err := calendar.NewService(ctx, option.WithHTTPClient(client))
@@ -119,7 +119,7 @@ func (c *CalendarGetEvents) getEvents(ctx context.Context, req CalendarGetEvents
 	}
 
 	t := time.Now().Format(time.RFC3339)
-	events, err := srv.Events.List(req.Request.CalendarId).ShowDeleted(false).
+	events, err := srv.Events.List(req.CalendarId).ShowDeleted(false).
 		SingleEvents(true).TimeMin(t).MaxResults(10).OrderBy("startTime").Do()
 	if err != nil {
 		return nil, fmt.Errorf("unable to retrieve user's events: %v", err)
@@ -137,25 +137,23 @@ func (c *CalendarGetEvents) Ports() []module.NodePort {
 			Source:        true,
 		},
 		{
-			Name:  "request",
+			Name:  CalendarGetEventsRequestPort,
 			Label: "Request",
-			Configuration: CalendarGetEventsRequestPort{
-				Request: CalendarGetEventsRequest{
-					Config: ClientConfig{
-						Scopes: []string{"https://www.googleapis.com/auth/calendar.events.readonly"},
-					},
-					CalendarId: "SomeID",
-					Token: Token{
-						TokenType: "Bearer",
-					},
+			Configuration: CalendarGetEventsRequest{
+				Config: ClientConfig{
+					Scopes: []string{"https://www.googleapis.com/auth/calendar.events.readonly"},
+				},
+				CalendarId: "SomeID",
+				Token: Token{
+					TokenType: "Bearer",
 				},
 			},
 			Source:   true,
 			Position: module.Left,
 		},
 		{
-			Name:          "success",
-			Label:         "Success",
+			Name:          CalendarGetEventsResponsePort,
+			Label:         "Response",
 			Source:        false,
 			Position:      module.Right,
 			Configuration: CalendarGetEventSuccess{},
@@ -164,7 +162,7 @@ func (c *CalendarGetEvents) Ports() []module.NodePort {
 	if c.settings.EnableErrorPort {
 		ports = append(ports, module.NodePort{
 			Position:      module.Bottom,
-			Name:          "error",
+			Name:          CalendarGetEventsErrorPort,
 			Label:         "Error",
 			Source:        false,
 			Configuration: CalendarGetEventsError{},

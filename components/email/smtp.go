@@ -11,14 +11,15 @@ import (
 
 const (
 	SendEmailComponent = "send_email"
-	PortSuccess        = "success"
+	PortResponse       = "response"
 	PortError          = "error"
-	PortIn             = "in"
+	PortRequest        = "request"
 )
 
 type SenderSettings struct {
-	EnableErrorPort   bool `json:"enableErrorPort" required:"true" title:"Enable Error Port" description:"If error happen during mail send, error port will emit an error message"`
-	EnableSuccessPort bool `json:"enableSuccessPort" required:"true" title:"Enable Success port"`
+	SmtpSettings       SmtpServerSettings `json:"smtpSettings" required:"true" title:"SMTP Settings" propertyOrder:"1"`
+	EnableErrorPort    bool               `json:"enableErrorPort" required:"true" title:"Enable Error Port" description:"If error happen during mail send, error port will emit an error message" propertyOrder:"2"`
+	EnableResponsePort bool               `json:"enableResponsePort" required:"true" title:"Enable Response port" propertyOrder:"3"`
 }
 
 type Recipient struct {
@@ -29,18 +30,13 @@ type Recipient struct {
 type SendEmailContext any
 
 type SendEmail struct {
-	Context SendEmailContext `json:"context" configurable:"true" title:"Context" propertyOrder:"1"`
-	Email   EmailConfig      `json:"email" required:"true" title:"Email"`
-}
+	Context     SendEmailContext `json:"context" configurable:"true" title:"Context" propertyOrder:"1"`
+	ContentType string           `json:"contentType" required:"true" title:"Content type" enum:"text/plain,text/html,application/octet-stream" propertyOrder:"2"`
+	From        string           `json:"from" title:"From" propertyOrder:"3"`
+	To          []Recipient      `json:"to,omitempty" required:"true" description:"List of recipients" title:"To" uniqueItems:"true" minItems:"1" propertyOrder:"4"`
 
-type EmailConfig struct {
-	ContentType string      `json:"contentType" required:"true" title:"Content type" enum:"text/plain,text/html,application/octet-stream" propertyOrder:"2"`
-	From        string      `json:"from" title:"From" propertyOrder:"3"`
-	To          []Recipient `json:"to,omitempty" required:"true" description:"List of recipients" title:"To" uniqueItems:"true" minItems:"1" propertyOrder:"4"`
-
-	Body         string             `json:"body" title:"Email body" format:"textarea" propertyOrder:"5"`
-	Subject      string             `json:"subject" title:"Subject" propertyOrder:"6"`
-	SmtpSettings SmtpServerSettings `json:"smtpSettings" required:"true" title:"SMTP Settings" propertyOrder:"7"`
+	Body    string `json:"body" title:"Email body" format:"textarea" propertyOrder:"5"`
+	Subject string `json:"subject" title:"Subject" propertyOrder:"6"`
 }
 
 type SmtpServerSettings struct {
@@ -52,16 +48,14 @@ type SmtpServerSettings struct {
 }
 
 type SendMessageSuccess struct {
-	Context   SendEmailContext `json:"context"`
-	MessageID string           `json:"messageID"`
-	Email     EmailConfig      `json:"sent"`
+	Request   SendEmail `json:"request"`
+	MessageID string    `json:"messageID"`
 }
 
 type SendMessageError struct {
-	Context   SendEmailContext `json:"context"`
-	Error     string           `json:"error"`
-	Email     EmailConfig      `json:"sent"`
-	MessageID string           `json:"messageID"`
+	Request   SendEmail `json:"request"`
+	Error     string    `json:"error"`
+	MessageID string    `json:"messageID"`
 }
 
 var SenderDefaultSettings = SenderSettings{}
@@ -84,6 +78,45 @@ func (t *SmtpSender) GetInfo() module.ComponentInfo {
 		Tags:        []string{"Email", "SMTP"},
 	}
 }
+func (t *SmtpSender) send(ctx context.Context, sendMsg SendEmail) (string, error) {
+
+	messageID, err := uuid.NewUUID()
+	if err != nil {
+		return "", err
+	}
+
+	client, err := mail.NewClient(t.settings.SmtpSettings.Host, mail.WithPort(t.settings.SmtpSettings.Port), mail.WithSMTPAuth(mail.SMTPAuthLogin),
+		mail.WithUsername(t.settings.SmtpSettings.Username), mail.WithPassword(t.settings.SmtpSettings.Password))
+
+	if err != nil {
+		return "", err
+	}
+
+	err = client.DialWithContext(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	m := mail.NewMsg()
+	_ = m.From(sendMsg.From)
+	for _, t := range sendMsg.To {
+		_ = m.To(fmt.Sprintf("%s <%s>", t.Name, t.Email))
+	}
+
+	m.Subject(sendMsg.Subject)
+	m.SetBodyString(mail.ContentType(sendMsg.ContentType), sendMsg.Body)
+
+	defer func() {
+		_ = client.Close()
+	}()
+
+	err = client.Send(m)
+	if err != nil {
+		return "", err
+	}
+
+	return messageID.String(), nil
+}
 
 func (t *SmtpSender) Handle(ctx context.Context, responseHandler module.Handler, port string, msg interface{}) error {
 	if port == module.SettingsPort {
@@ -95,75 +128,31 @@ func (t *SmtpSender) Handle(ctx context.Context, responseHandler module.Handler,
 		return nil
 	}
 
+	if port != PortRequest {
+		return fmt.Errorf("unknown port %s", port)
+	}
+
 	sendMsg, ok := msg.(SendEmail)
 	if !ok {
 		return fmt.Errorf("invalid message")
 	}
 
-	messageID, err := uuid.NewUUID()
-	if err != nil {
-		return err
-	}
-
-	client, err := mail.NewClient(sendMsg.Email.SmtpSettings.Host, mail.WithPort(sendMsg.Email.SmtpSettings.Port), mail.WithSMTPAuth(mail.SMTPAuthLogin),
-		mail.WithUsername(sendMsg.Email.SmtpSettings.Username), mail.WithPassword(sendMsg.Email.SmtpSettings.Password))
-
+	messageID, err := t.send(ctx, sendMsg)
 	if err != nil {
 		if t.settings.EnableErrorPort {
 			return responseHandler(ctx, PortError, SendMessageError{
-				Context:   sendMsg.Context,
-				Email:     sendMsg.Email,
+				Request:   sendMsg,
 				Error:     err.Error(),
-				MessageID: messageID.String(),
+				MessageID: messageID,
 			})
 		}
 		return err
 	}
 
-	err = client.DialWithContext(ctx)
-	if err != nil {
-		if t.settings.EnableErrorPort {
-			return responseHandler(ctx, PortError, SendMessageError{
-				Context:   sendMsg.Context,
-				Email:     sendMsg.Email,
-				Error:     err.Error(),
-				MessageID: messageID.String(),
-			})
-		}
-		return err
-	}
-
-	m := mail.NewMsg()
-	_ = m.From(sendMsg.Email.From)
-	for _, t := range sendMsg.Email.To {
-		_ = m.To(fmt.Sprintf("%s <%s>", t.Name, t.Email))
-	}
-
-	m.Subject(sendMsg.Email.Subject)
-	m.SetBodyString(mail.ContentType(sendMsg.Email.ContentType), sendMsg.Email.Body)
-
-	defer func() {
-		_ = client.Close()
-	}()
-
-	err = client.Send(m)
-	if err != nil {
-		if t.settings.EnableErrorPort {
-			return responseHandler(ctx, PortError, SendMessageError{
-				Context:   sendMsg.Context,
-				Email:     sendMsg.Email,
-				Error:     err.Error(),
-				MessageID: messageID.String(),
-			})
-		}
-		return err
-	}
-
-	if err == nil && t.settings.EnableSuccessPort {
-		return responseHandler(ctx, PortSuccess, SendMessageSuccess{
-			Context:   sendMsg.Context,
-			Email:     sendMsg.Email,
-			MessageID: messageID.String(),
+	if err == nil && t.settings.EnableResponsePort {
+		return responseHandler(ctx, PortResponse, SendMessageSuccess{
+			Request:   sendMsg,
+			MessageID: messageID,
 		})
 	}
 	// send email here
@@ -173,39 +162,38 @@ func (t *SmtpSender) Handle(ctx context.Context, responseHandler module.Handler,
 func (t *SmtpSender) Ports() []module.NodePort {
 	ports := []module.NodePort{
 		{
-			Name:          module.SettingsPort,
-			Label:         "Settings",
-			Source:        true,
-			Configuration: SenderSettings{},
+			Name:   module.SettingsPort,
+			Label:  "Settings",
+			Source: true,
+			Configuration: SenderSettings{
+				SmtpSettings: SmtpServerSettings{
+					Host: "smtp.domain.com",
+					Port: 587,
+				},
+			},
 		},
 		{
-			Name:   PortIn,
-			Label:  "In",
+			Name:   PortRequest,
+			Label:  "Request",
 			Source: true,
 			Configuration: SendEmail{
-				Email: EmailConfig{
-					Body:        "Email text",
-					ContentType: "text/html",
-					To: []Recipient{
-						{
-							Name:  "John Doe",
-							Email: "johndoe@example.com",
-						},
-					},
-					SmtpSettings: SmtpServerSettings{
-						Host: "smtp.domain.com",
-						Port: 587,
+				Body:        "Email text",
+				ContentType: "text/html",
+				To: []Recipient{
+					{
+						Name:  "John Doe",
+						Email: "johndoe@example.com",
 					},
 				},
 			},
 			Position: module.Left,
 		},
 	}
-	if t.settings.EnableSuccessPort {
+	if t.settings.EnableResponsePort {
 		ports = append(ports, module.NodePort{
 			Position:      module.Right,
-			Name:          PortSuccess,
-			Label:         "Success",
+			Name:          PortResponse,
+			Label:         "Response",
 			Source:        false,
 			Configuration: SendMessageSuccess{},
 		})

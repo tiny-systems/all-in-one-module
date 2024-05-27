@@ -9,8 +9,8 @@ import (
 
 const (
 	ModifyComponent        = "common_modify"
-	ModifyOutPort   string = "out"
 	ModifyInPort    string = "in"
+	ModifyOutPort   string = "out"
 )
 
 type ModifyContext any

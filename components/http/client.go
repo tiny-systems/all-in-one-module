@@ -10,7 +10,12 @@ import (
 	"time"
 )
 
-const ClientComponent = "http_client"
+const (
+	ClientComponent    = "http_client"
+	ClientRequestPort  = "request"
+	ClientResponsePort = "response"
+	ClientErrorPort    = "error"
+)
 
 type Header struct {
 	Key   string `json:"key" required:"true" title:"Key" colSpan:"col-span-6"`
@@ -20,16 +25,16 @@ type Header struct {
 type ClientRequestContext any
 type ClientRequestBody any
 
-type ClientRequest struct {
-	Context ClientRequestContext `json:"context" configurable:"true" title:"Context" description:"Message to be sent further" propertyOrder:"1"`
-	Request `json:"request" title:"HTTP request" required:"true" propertyOrder:"2"`
+type ClientRequestSettings struct {
+	EnableErrorPort bool `json:"enableErrorPort" required:"true" title:"Enable Error Port" description:"If request may fail, error port will emit an error message"`
 }
 
-type Request struct {
-	Method  string            `json:"method" required:"true" title:"Method" enum:"GET,POST,PATCH,PUT,DELETE" enumTitles:"GET,POST,PATCH,PUT,DELETE" colSpan:"col-span-3" propertyOrder:"1"`
-	URL     string            `json:"url" required:"true" title:"URL" format:"uri" propertyOrder:"2"`
-	Headers []Header          `json:"headers" required:"true" title:"Headers" propertyOrder:"3"`
-	Body    ClientRequestBody `json:"body" configurable:"true" title:"Request Body" propertyOrder:"4"`
+type ClientRequest struct {
+	Context ClientRequestContext `json:"context" configurable:"true" title:"Context" description:"Message to be sent further" propertyOrder:"1"`
+	Method  string               `json:"method" required:"true" title:"Method" enum:"GET,POST,PATCH,PUT,DELETE" enumTitles:"GET,POST,PATCH,PUT,DELETE" colSpan:"col-span-3" propertyOrder:"2"`
+	URL     string               `json:"url" required:"true" title:"URL" format:"uri" propertyOrder:"3"`
+	Headers []Header             `json:"headers" required:"true" title:"Headers" propertyOrder:"4"`
+	Body    ClientRequestBody    `json:"body" configurable:"true" title:"Request Body" propertyOrder:"5"`
 }
 
 type Response struct {
@@ -43,7 +48,13 @@ type ClientResponse struct {
 	Response string        `json:"response"`
 }
 
+type ClientError struct {
+	Request ClientRequest `json:"request"`
+	Error   string        `json:"response"`
+}
+
 type Client struct {
+	settings ClientRequestSettings
 }
 
 func (h Client) Instance() module.Component {
@@ -89,24 +100,22 @@ func (h Client) Handle(ctx context.Context, handler module.Handler, port string,
 	if err != nil {
 		return err
 	}
-	return handler(ctx, "response", ClientResponse{
+	return handler(ctx, ClientResponsePort, ClientResponse{
 		Response: string(b),
 		Request:  in,
 	})
 }
 
 func (h Client) Ports() []module.NodePort {
-	return []module.NodePort{
+	ports := []module.NodePort{
 		{
-			Name:   "request",
+			Name:   ClientRequestPort,
 			Label:  "Request",
 			Source: true,
 			Configuration: ClientRequest{
-				Request: Request{
-					Method:  http.MethodGet,
-					Headers: make([]Header, 0),
-					URL:     "http://example.com",
-				},
+				Method:  http.MethodGet,
+				Headers: make([]Header, 0),
+				URL:     "http://example.com",
 			},
 			Position: module.Left,
 		},
@@ -117,6 +126,17 @@ func (h Client) Ports() []module.NodePort {
 			Configuration: ClientResponse{},
 		},
 	}
+
+	if !h.settings.EnableErrorPort {
+		return ports
+	}
+	return append(ports, module.NodePort{
+		Name:          ClientErrorPort,
+		Label:         "Error",
+		Source:        false,
+		Position:      module.Bottom,
+		Configuration: ClientError{},
+	})
 }
 
 var _ module.Component = (*Client)(nil)

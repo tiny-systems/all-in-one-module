@@ -10,9 +10,9 @@ import (
 
 const (
 	SendSlackChannelComponent = "send_slack_channel"
-	PortSuccess               = "success"
+	PortResponse              = "response"
 	PortError                 = "error"
-	PortIn                    = "in"
+	PortRequest               = "request"
 )
 
 type ChannelSenderSettings struct {
@@ -34,14 +34,13 @@ type SendChannelRequest struct {
 }
 
 type SendSlackChannelSuccess struct {
-	Context SendSlackChannelContext `json:"context"`
-	Sent    Message                 `json:"sent"`
+	Request SendChannelRequest `json:"request"`
+	Sent    Message            `json:"sent"`
 }
 
 type SendSlackChannelError struct {
-	Context SendSlackChannelContext `json:"context"`
-	Error   string                  `json:"error"`
-	Send    Message                 `json:"sent"`
+	Request SendChannelRequest `json:"request"`
+	Error   string             `json:"error"`
 }
 
 var SenderDefaultSettings = ChannelSenderSettings{}
@@ -86,8 +85,7 @@ func (t *ChannelSender) Handle(ctx context.Context, responseHandler module.Handl
 	if err != nil {
 		if t.settings.EnableErrorPort {
 			return responseHandler(ctx, PortError, SendSlackChannelError{
-				Context: in.Context,
-				Send:    in.Message,
+				Request: in,
 				Error:   err.Error(),
 			})
 		}
@@ -95,8 +93,8 @@ func (t *ChannelSender) Handle(ctx context.Context, responseHandler module.Handl
 	}
 
 	if err == nil && t.settings.EnableSuccessPort {
-		return responseHandler(ctx, PortSuccess, SendSlackChannelSuccess{
-			Context: in.Context,
+		return responseHandler(ctx, PortResponse, SendSlackChannelSuccess{
+			Request: in,
 			Sent:    in.Message,
 		})
 	}
@@ -113,8 +111,8 @@ func (t *ChannelSender) Ports() []module.NodePort {
 			Configuration: ChannelSenderSettings{},
 		},
 		{
-			Name:   PortIn,
-			Label:  "In",
+			Name:   PortRequest,
+			Label:  "Request",
 			Source: true,
 			Configuration: SendChannelRequest{
 				Message: Message{
@@ -127,8 +125,8 @@ func (t *ChannelSender) Ports() []module.NodePort {
 	if t.settings.EnableSuccessPort {
 		ports = append(ports, module.NodePort{
 			Position:      module.Right,
-			Name:          PortSuccess,
-			Label:         "Success",
+			Name:          PortResponse,
+			Label:         "Response",
 			Source:        false,
 			Configuration: SendSlackChannelSuccess{},
 		})
@@ -137,7 +135,7 @@ func (t *ChannelSender) Ports() []module.NodePort {
 	if t.settings.EnableErrorPort {
 		ports = append(ports, module.NodePort{
 			Position:      module.Bottom,
-			Name:          PortError,
+			Name:          PortRequest,
 			Label:         "Error",
 			Source:        false,
 			Configuration: SendSlackChannelError{},

@@ -11,10 +11,10 @@ import (
 )
 
 const (
-	DomainWhoisComponent          = "domain_whois"
-	DomainWhoisSuccessPort string = "success"
-	DomainWhoisErrorPort   string = "error"
-	DomainWhoisInPort      string = "in"
+	DomainWhoisComponent           = "domain_whois"
+	DomainWhoisResponsePort string = "response"
+	DomainWhoisErrorPort    string = "error"
+	DomainWhoisRequestPort  string = "request"
 )
 
 var (
@@ -36,10 +36,10 @@ type DomainWhoisSuccess struct {
 }
 
 type DomainWhoisError struct {
-	Error      string                    `json:"error"`
-	ErrorType  string                    `json:"errorType" enum:"parseError,fetchError"`
-	DomainName string                    `json:"domainName" format:"hostname"`
-	Context    DomainWhoisRequestContext `json:"context,omitempty"`
+	Error      string             `json:"error"`
+	ErrorType  string             `json:"errorType" enum:"parseError,fetchError"`
+	DomainName string             `json:"domainName" format:"hostname"`
+	Request    DomainWhoisRequest `json:"request,omitempty"`
 }
 
 type Whois struct {
@@ -60,7 +60,7 @@ func (t *Whois) GetInfo() module.ComponentInfo {
 
 func (t *Whois) Handle(ctx context.Context, handler module.Handler, port string, msg interface{}) error {
 
-	if port != DomainWhoisInPort {
+	if port != DomainWhoisRequestPort {
 		return fmt.Errorf("port %s is not supported", port)
 	}
 
@@ -72,7 +72,7 @@ func (t *Whois) Handle(ctx context.Context, handler module.Handler, port string,
 	if err != nil {
 		return handler(ctx, DomainWhoisErrorPort, DomainWhoisError{
 			ErrorType:  ErrFetch.Error(),
-			Context:    in.Context,
+			Request:    in,
 			DomainName: in.DomainName,
 			Error:      err.Error(),
 		})
@@ -81,7 +81,7 @@ func (t *Whois) Handle(ctx context.Context, handler module.Handler, port string,
 	if err != nil {
 		return handler(ctx, DomainWhoisErrorPort, DomainWhoisError{
 			ErrorType:  ErrParse.Error(),
-			Context:    in.Context,
+			Request:    in,
 			DomainName: in.DomainName,
 			Error:      err.Error(),
 		})
@@ -91,14 +91,14 @@ func (t *Whois) Handle(ctx context.Context, handler module.Handler, port string,
 		DomainName: in.DomainName,
 		Context:    in.Context,
 	}
-	return handler(ctx, DomainWhoisSuccessPort, resp)
+	return handler(ctx, DomainWhoisResponsePort, resp)
 }
 
 func (t *Whois) Ports() []module.NodePort {
 	return []module.NodePort{
 		{
-			Name:   DomainWhoisInPort,
-			Label:  "In",
+			Name:   DomainWhoisRequestPort,
+			Label:  "Request",
 			Source: true,
 			Configuration: DomainWhoisRequest{
 				DomainName: "example.com",
@@ -106,8 +106,8 @@ func (t *Whois) Ports() []module.NodePort {
 			Position: module.Left,
 		},
 		{
-			Name:          DomainWhoisSuccessPort,
-			Label:         "Success",
+			Name:          DomainWhoisResponsePort,
+			Label:         "Response",
 			Source:        false,
 			Configuration: DomainWhoisSuccess{},
 			Position:      module.Right,
