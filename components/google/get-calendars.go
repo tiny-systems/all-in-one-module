@@ -15,6 +15,7 @@ const (
 	GetCalendarsComponent    = "google_get_calendars"
 	GetCalendarsRequestPort  = "request"
 	GetCalendarsResponsePort = "response"
+	GetCalendarsErrorPort    = "error"
 )
 
 type GetCalendarsContext any
@@ -87,7 +88,6 @@ func (g *GetCalendars) Handle(ctx context.Context, output module.Handler, port s
 		Request:   in,
 		Calendars: calendars,
 	})
-
 }
 
 func (c *GetCalendars) getCalendars(ctx context.Context, req GetCalendarsRequest) ([]*calendar.CalendarListEntry, error) {
@@ -139,7 +139,17 @@ func (g *GetCalendars) Ports() []module.NodePort {
 			Configuration: GetCalendarsResponse{},
 		},
 	}
-	return ports
+	if !g.settings.EnableErrorPort {
+		return ports
+	}
+
+	return append(ports, module.NodePort{
+		Position:      module.Bottom,
+		Name:          GetCalendarsErrorPort,
+		Label:         "Error",
+		Source:        false,
+		Configuration: GetCalendarsError{},
+	})
 }
 
 func (g *GetCalendars) Instance() module.Component {
