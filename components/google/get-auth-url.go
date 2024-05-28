@@ -75,13 +75,13 @@ func (a *GetAuthUrl) Handle(ctx context.Context, output module.Handler, port str
 
 	if err != nil {
 		// check err port
-		if a.settings.EnableErrorPort {
-			return output(ctx, GetAuthUrlErrorPort, GetAuthUrlErrorMessage{
-				Request: in,
-				Error:   err.Error(),
-			})
+		if !a.settings.EnableErrorPort {
+			return err
 		}
-		return err
+		return output(ctx, GetAuthUrlErrorPort, GetAuthUrlErrorMessage{
+			Request: in,
+			Error:   err.Error(),
+		})
 	}
 
 	return output(ctx, GetAuthUrlResponsePort, GetAuthUrlOutMessage{

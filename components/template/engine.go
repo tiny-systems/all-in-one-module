@@ -179,18 +179,24 @@ func (h *Engine) Handle(ctx context.Context, handler module.Handler, port string
 		t, ok := h.templateSet[in.Template]
 		if !ok {
 			err := fmt.Errorf("template not found")
-			h.error(ctx, err, in, handler)
-			return err
+			if !h.settings.EnableErrorPort {
+				return err
+			}
+			return handler(ctx, EngineErrorPort, Error{
+				Input: in,
+				Error: err.Error(),
+			})
 		}
 
-		if err := t.ExecuteTemplate(buf, in.Template, in.RenderContext); err != nil {
-			if h.settings.EnableErrorPort {
-				_ = handler(ctx, EngineErrorPort, Error{
-					Input: in,
-					Error: err.Error(),
-				})
+		err := t.ExecuteTemplate(buf, in.Template, in.RenderContext)
+		if err != nil {
+			if !h.settings.EnableErrorPort {
+				return err
 			}
-			return err
+			return handler(ctx, EngineErrorPort, Error{
+				Input: in,
+				Error: err.Error(),
+			})
 		}
 
 		return handler(ctx, EngineResponsePort, Output{
@@ -204,14 +210,6 @@ func (h *Engine) Handle(ctx context.Context, handler module.Handler, port string
 	return nil
 }
 
-func (h *Engine) error(ctx context.Context, err error, input Input, handler module.Handler) {
-	if h.settings.EnableErrorPort {
-		_ = handler(ctx, EngineErrorPort, Error{
-			Input: input,
-			Error: err.Error(),
-		})
-	}
-}
 func (h *Engine) Ports() []module.NodePort {
 	ports := []module.NodePort{
 		{
@@ -234,16 +232,16 @@ func (h *Engine) Ports() []module.NodePort {
 			Configuration: h.settings,
 		},
 	}
-	if h.settings.EnableErrorPort {
-		ports = append(ports, module.NodePort{
-			Position:      module.Bottom,
-			Name:          EngineErrorPort,
-			Label:         "Error",
-			Source:        false,
-			Configuration: Error{},
-		})
+	if !h.settings.EnableErrorPort {
+		return ports
 	}
-	return ports
+	return append(ports, module.NodePort{
+		Position:      module.Bottom,
+		Name:          EngineErrorPort,
+		Label:         "Error",
+		Source:        false,
+		Configuration: Error{},
+	})
 }
 
 func (h *Engine) Instance() module.Component {

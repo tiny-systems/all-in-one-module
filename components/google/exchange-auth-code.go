@@ -84,13 +84,13 @@ func (a *ExchangeAuthCode) Handle(ctx context.Context, output module.Handler, po
 	token, err := a.exchange(ctx, in)
 	if err != nil {
 		// check err port
-		if a.settings.EnableErrorPort {
-			return output(ctx, ExchangeAuthCodeErrorPort, ExchangeAuthCodeError{
-				Request: in,
-				Error:   err.Error(),
-			})
+		if !a.settings.EnableErrorPort {
+			return err
 		}
-		return err
+		return output(ctx, ExchangeAuthCodeErrorPort, ExchangeAuthCodeError{
+			Request: in,
+			Error:   err.Error(),
+		})
 	}
 
 	return output(ctx, ExchangeAuthCodeResponsePort, ExchangeAuthCodeOutMessage{
@@ -129,17 +129,17 @@ func (a *ExchangeAuthCode) Ports() []module.NodePort {
 		},
 	}
 
-	if a.settings.EnableErrorPort {
-		ports = append(ports, module.NodePort{
-			Position:      module.Bottom,
-			Name:          "error",
-			Label:         "Error",
-			Source:        false,
-			Configuration: ExchangeAuthCodeError{},
-		})
+	if !a.settings.EnableErrorPort {
+		return ports
 	}
 
-	return ports
+	return append(ports, module.NodePort{
+		Position:      module.Bottom,
+		Name:          "error",
+		Label:         "Error",
+		Source:        false,
+		Configuration: ExchangeAuthCodeError{},
+	})
 }
 
 func (a *ExchangeAuthCode) Instance() module.Component {

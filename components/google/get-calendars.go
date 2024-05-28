@@ -75,13 +75,13 @@ func (g *GetCalendars) Handle(ctx context.Context, output module.Handler, port s
 	calendars, err := g.getCalendars(ctx, in)
 	if err != nil {
 		// check err port
-		if g.settings.EnableErrorPort {
-			return output(ctx, ExchangeAuthCodeErrorPort, GetCalendarsError{
-				Request: in,
-				Error:   err.Error(),
-			})
+		if !g.settings.EnableErrorPort {
+			return err
 		}
-		return err
+		return output(ctx, ExchangeAuthCodeErrorPort, GetCalendarsError{
+			Request: in,
+			Error:   err.Error(),
+		})
 	}
 
 	return output(ctx, GetCalendarsResponsePort, GetCalendarsResponse{

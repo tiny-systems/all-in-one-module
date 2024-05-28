@@ -83,13 +83,13 @@ func (t *ChannelSender) Handle(ctx context.Context, responseHandler module.Handl
 	_, _, _, err := client.SendMessageContext(ctx, in.Message.ChannelID, slack.MsgOptionText(in.Message.Text, true))
 
 	if err != nil {
-		if t.settings.EnableErrorPort {
-			return responseHandler(ctx, PortError, SendSlackChannelError{
-				Request: in,
-				Error:   err.Error(),
-			})
+		if !t.settings.EnableErrorPort {
+			return err
 		}
-		return err
+		return responseHandler(ctx, PortError, SendSlackChannelError{
+			Request: in,
+			Error:   err.Error(),
+		})
 	}
 
 	if err == nil && t.settings.EnableSuccessPort {
@@ -132,17 +132,16 @@ func (t *ChannelSender) Ports() []module.NodePort {
 		})
 	}
 
-	if t.settings.EnableErrorPort {
-		ports = append(ports, module.NodePort{
-			Position:      module.Bottom,
-			Name:          PortRequest,
-			Label:         "Error",
-			Source:        false,
-			Configuration: SendSlackChannelError{},
-		})
+	if !t.settings.EnableErrorPort {
+		return ports
 	}
-
-	return ports
+	return append(ports, module.NodePort{
+		Position:      module.Bottom,
+		Name:          PortRequest,
+		Label:         "Error",
+		Source:        false,
+		Configuration: SendSlackChannelError{},
+	})
 }
 
 var _ module.Component = (*ChannelSender)(nil)

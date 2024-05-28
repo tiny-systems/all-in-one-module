@@ -42,7 +42,7 @@ type CalendarGetEventsError struct {
 	Error   string                   `json:"error"`
 }
 
-type CalendarGetEventSuccess struct {
+type CalendarGetEventResponse struct {
 	Request CalendarGetEventsRequest `json:"request"`
 	Results calendar.Events          `json:"results"`
 }
@@ -83,20 +83,20 @@ func (c *CalendarGetEvents) Handle(ctx context.Context, handler module.Handler, 
 		return fmt.Errorf("invalid message")
 	}
 	events, err := c.getEvents(ctx, req)
-
-	if err != nil && c.settings.EnableErrorPort {
-		_ = handler(ctx, CalendarGetEventsErrorPort, CalendarGetEventsError{
+	if err != nil {
+		if !c.settings.EnableErrorPort {
+			return err
+		}
+		return handler(ctx, CalendarGetEventsErrorPort, CalendarGetEventsError{
 			Request: req,
 			Error:   err.Error(),
 		})
-		return err
 	}
 
-	return handler(ctx, CalendarGetEventsResponsePort, CalendarGetEventSuccess{
+	return handler(ctx, CalendarGetEventsResponsePort, CalendarGetEventResponse{
 		Request: req,
 		Results: *events,
 	})
-
 }
 
 func (c *CalendarGetEvents) getEvents(ctx context.Context, req CalendarGetEventsRequest) (*calendar.Events, error) {
@@ -156,19 +156,20 @@ func (c *CalendarGetEvents) Ports() []module.NodePort {
 			Label:         "Response",
 			Source:        false,
 			Position:      module.Right,
-			Configuration: CalendarGetEventSuccess{},
+			Configuration: CalendarGetEventResponse{},
 		}}
 
-	if c.settings.EnableErrorPort {
-		ports = append(ports, module.NodePort{
-			Position:      module.Bottom,
-			Name:          CalendarGetEventsErrorPort,
-			Label:         "Error",
-			Source:        false,
-			Configuration: CalendarGetEventsError{},
-		})
+	if !c.settings.EnableErrorPort {
+		return ports
 	}
-	return ports
+
+	return append(ports, module.NodePort{
+		Position:      module.Bottom,
+		Name:          CalendarGetEventsErrorPort,
+		Label:         "Error",
+		Source:        false,
+		Configuration: CalendarGetEventsError{},
+	})
 }
 
 func (c *CalendarGetEvents) Instance() module.Component {

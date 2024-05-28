@@ -139,14 +139,14 @@ func (t *SmtpSender) Handle(ctx context.Context, responseHandler module.Handler,
 
 	messageID, err := t.send(ctx, sendMsg)
 	if err != nil {
-		if t.settings.EnableErrorPort {
-			return responseHandler(ctx, PortError, SendMessageError{
-				Request:   sendMsg,
-				Error:     err.Error(),
-				MessageID: messageID,
-			})
+		if !t.settings.EnableErrorPort {
+			return err
 		}
-		return err
+		return responseHandler(ctx, PortError, SendMessageError{
+			Request:   sendMsg,
+			Error:     err.Error(),
+			MessageID: messageID,
+		})
 	}
 
 	if err == nil && t.settings.EnableResponsePort {
@@ -199,17 +199,17 @@ func (t *SmtpSender) Ports() []module.NodePort {
 		})
 	}
 
-	if t.settings.EnableErrorPort {
-		ports = append(ports, module.NodePort{
-			Position:      module.Bottom,
-			Name:          PortError,
-			Label:         "Error",
-			Source:        false,
-			Configuration: SendMessageError{},
-		})
+	if !t.settings.EnableErrorPort {
+		return ports
 	}
 
-	return ports
+	return append(ports, module.NodePort{
+		Position:      module.Bottom,
+		Name:          PortError,
+		Label:         "Error",
+		Source:        false,
+		Configuration: SendMessageError{},
+	})
 }
 
 var _ module.Component = (*SmtpSender)(nil)
