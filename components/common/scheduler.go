@@ -30,7 +30,7 @@ type SchedulerInMessage struct {
 type Task struct {
 	ID       string    `json:"id" required:"true" title:"Unique task ID" propertyOrder:"1"`
 	DateTime time.Time `json:"dateTime" required:"true" title:"Date and time" description:"Format examples: 2012-10-01T09:45:00.000+02:00" propertyOrder:"2"`
-	Schedule bool      `json:"schedule" required:"true" title:"Schedule" description:"You can unschedule existing task by settings scheduler false. Defaults: true" propertyOrder:"3"`
+	Schedule bool      `json:"schedule" required:"true" title:"Schedule" description:"You can unschedule existing task by settings schedule equals false. Default: true" propertyOrder:"3"`
 }
 
 type SchedulerOutMessage struct {
