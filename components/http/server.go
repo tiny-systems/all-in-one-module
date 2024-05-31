@@ -44,7 +44,7 @@ const (
 )
 
 type Server struct {
-	e            *echo.Echo
+	//e            *echo.Echo
 	settings     ServerSettings
 	settingsLock *sync.Mutex
 	//
@@ -70,7 +70,7 @@ type Server struct {
 func (h *Server) Instance() module.Component {
 
 	return &Server{
-		e:                    echo.New(),
+		//	e:                    echo.New(),
 		publicListenAddr:     []string{},
 		publicListenAddrLock: &sync.Mutex{},
 		cancelFuncLock:       &sync.Mutex{},
@@ -213,14 +213,14 @@ func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Hand
 	e.HideBanner = false
 	e.HidePort = false
 
-	h.e = e
+	//h.e = e
 
 	serverCtx, cancel := context.WithCancel(ctx)
 
 	h.setCancelFunc(cancel)
 	h.contexts = ttlmap.New(ctx, msg.ReadTimeout*2)
 
-	h.e.Any("*", func(c echo.Context) error {
+	e.Any("*", func(c echo.Context) error {
 		id, err := uuid.NewUUID()
 		if err != nil {
 			return err
@@ -332,8 +332,8 @@ func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Hand
 		return nil
 	})
 
-	h.e.Server.ReadTimeout = time.Duration(msg.ReadTimeout) * time.Second
-	h.e.Server.WriteTimeout = time.Duration(msg.WriteTimeout) * time.Second
+	e.Server.ReadTimeout = time.Duration(msg.ReadTimeout) * time.Second
+	e.Server.WriteTimeout = time.Duration(msg.WriteTimeout) * time.Second
 
 	var (
 		upgrade    module.AddressUpgrade
@@ -351,7 +351,7 @@ func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Hand
 	}
 
 	go func() {
-		err := h.e.Start(listenAddr)
+		err := e.Start(listenAddr)
 		if errors.Is(err, http.ErrServerClosed) {
 			return
 		}
@@ -359,8 +359,8 @@ func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Hand
 	}()
 
 	time.Sleep(time.Millisecond * 1500)
-	if h.e.Listener != nil {
-		if tcpAddr, ok := h.e.Listener.Addr().(*net.TCPAddr); ok {
+	if e.Listener != nil {
+		if tcpAddr, ok := e.Listener.Addr().(*net.TCPAddr); ok {
 			publicHostnames, err := upgrade(ctx, msg.AutoHostName, msg.Hostnames, tcpAddr.Port)
 			if err != nil {
 				h.setPublicListerAddr([]string{fmt.Sprintf("http://localhost:%d", tcpAddr.Port)})
@@ -376,10 +376,13 @@ func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Hand
 	_ = handler(ctx, module.ReconcilePort, nil)
 
 	<-serverCtx.Done()
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
 
-	h.e.Shutdown(shutdownCtx)
+	fmt.Println("!!! Shutdown http server")
+
+	shutdownCtx, shutDownCancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer shutDownCancel()
+
+	_ = e.Shutdown(shutdownCtx)
 	h.setCancelFunc(nil)
 
 	// send status when we stopped

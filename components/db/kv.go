@@ -23,7 +23,7 @@ const (
 	PortStore       = "store"
 	PortQuery       = "query"
 	PortQueryResult = "query_result"
-	PortStoreResult = "store_result"
+	PortStoreAck    = "store_ack"
 )
 
 type KeyValueStoreDocument map[string]interface{}
@@ -41,9 +41,9 @@ func (k KeyValueStoreDocument) PrepareJSONSchema(schema *jsonschema.Schema) erro
 }
 
 type KeyValueStoreSettings struct {
-	Document              KeyValueStoreDocument `json:"document" type:"object" required:"true" title:"Document" description:"Structure of the object will be used to store incoming messages. Values are arbitrary. Make sure the document has primary key defined below." configurable:"true" propertyOrder:"1"`
-	PrimaryKey            string                `json:"primaryKey" title:"Primary key" required:"true" default:"id" propertyOrder:"2"`
-	EnableStoreResultPort bool                  `json:"enableStoreResultPort" required:"true" title:"Enable Store Result Port" default:"false" description:"Emits information if message was stored or not" propertyOrder:"3"`
+	Document           KeyValueStoreDocument `json:"document" type:"object" required:"true" title:"Document" description:"Structure of the object will be used to store incoming messages. Values are arbitrary. Make sure the document has primary key defined below." configurable:"true" propertyOrder:"1"`
+	PrimaryKey         string                `json:"primaryKey" title:"Primary key" required:"true" default:"id" propertyOrder:"2"`
+	EnableStoreAckPort bool                  `json:"enableStoreResultPort" required:"true" title:"Enable Store Ack Port" default:"false" description:"Emits information if message was stored or not" propertyOrder:"3"`
 }
 
 type KeyValueStore struct {
@@ -127,8 +127,8 @@ func (k *KeyValueStore) Handle(ctx context.Context, output module.Handler, port 
 			return fmt.Errorf("unknown operation: %s", in.Operation)
 		}
 
-		if k.settings.EnableStoreResultPort {
-			output(ctx, PortStoreResult, KeyValueStoreResult{
+		if k.settings.EnableStoreAckPort {
+			return output(ctx, PortStoreAck, KeyValueStoreResult{
 				Request: in,
 			})
 		}
@@ -223,10 +223,10 @@ func (k *KeyValueStore) Ports() []module.NodePort {
 			},
 		},
 	}
-	if k.settings.EnableStoreResultPort {
+	if k.settings.EnableStoreAckPort {
 		ports = append(ports, module.NodePort{
-			Name:          PortStoreResult,
-			Label:         "Store result",
+			Name:          PortStoreAck,
+			Label:         "Store ack",
 			Source:        false,
 			Configuration: KeyValueStoreResult{},
 			Position:      module.Right,

@@ -3,7 +3,6 @@ package common
 import (
 	"context"
 	"fmt"
-	"github.com/goccy/go-json"
 	cmap "github.com/orcaman/concurrent-map/v2"
 	"github.com/tiny-systems/module/module"
 	"github.com/tiny-systems/module/registry"
@@ -51,14 +50,6 @@ type task struct {
 	id    string
 }
 
-func (s *Scheduler) GetState() ([]byte, error) {
-	return json.Marshal(s.tasks)
-}
-
-func (s *Scheduler) SetState(state []byte) error {
-	return json.Unmarshal(state, &s.tasks)
-}
-
 type Scheduler struct {
 	settings SchedulerSettings
 	tasks    cmap.ConcurrentMap[string, *task]
@@ -103,6 +94,7 @@ func (s *Scheduler) Handle(ctx context.Context, handler module.Handler, port str
 	if port != SchedulerInPort {
 		return fmt.Errorf("invalid port: %s", port)
 	}
+
 	in, ok := msg.(SchedulerInMessage)
 	if !ok {
 		return fmt.Errorf("invalid message")
@@ -156,10 +148,6 @@ func (s *Scheduler) addOrUpdateTask(id string, start bool, duration time.Duratio
 		call:  f,
 	}
 	s.tasks.Set(id, tt)
-
-	//if s.isRunning() {
-	//	go s.waitTask(tt)
-	//}
 }
 
 func (s *Scheduler) waitTask(ctx context.Context, d *task) {
@@ -200,34 +188,18 @@ func (s *Scheduler) Ports() []module.NodePort {
 			Position:      module.Right,
 		},
 	}
-	if s.settings.EnableAckPort {
-		ports = append(ports, module.NodePort{
-			Name:          SchedulerAckPort,
-			Label:         "Ack",
-			Source:        false,
-			Configuration: SchedulerTaskAck{},
-			Position:      module.Bottom,
-		})
+
+	if !s.settings.EnableAckPort {
+		return ports
 	}
 
-	return ports
-}
-
-func (s *Scheduler) debugTasks(ctx context.Context) {
-
-	ticker := time.NewTicker(time.Second * 5)
-	for {
-		select {
-		case <-ticker.C:
-			fmt.Println("jobs", "amount", s.tasks.Count())
-			for _, k := range s.tasks.Keys() {
-				fmt.Println("job", k)
-			}
-		case <-ctx.Done():
-			fmt.Println("exiting from debug")
-			return
-		}
-	}
+	return append(ports, module.NodePort{
+		Name:          SchedulerAckPort,
+		Label:         "Ack",
+		Source:        false,
+		Configuration: SchedulerTaskAck{},
+		Position:      module.Bottom,
+	})
 }
 
 var scheduler = (*Scheduler)(nil)

@@ -28,8 +28,9 @@ type CalendarGetEventsRequest struct {
 	StartDate   time.Time                `json:"startDate" title:"Start date" propertyOrder:"4"`
 	EndDate     time.Time                `json:"endDate" title:"End date" propertyOrder:"5"`
 	SyncToken   string                   `json:"syncToken" title:"Sync Token" propertyOrder:"6"`
-	Token       Token                    `json:"token" required:"true" title:"Auth Token" propertyOrder:"7"`
-	Config      ClientConfig             `json:"config" required:"true" title:"Client credentials" propertyOrder:"8"`
+	PageToken   string                   `json:"pageToken" title:"Page Token" propertyOrder:"7"`
+	Token       Token                    `json:"token" required:"true" title:"Auth Token" propertyOrder:"8"`
+	Config      ClientConfig             `json:"config" required:"true" title:"Client credentials" propertyOrder:"9"`
 }
 
 type ClientConfig struct {
@@ -118,9 +119,25 @@ func (c *CalendarGetEvents) getEvents(ctx context.Context, req CalendarGetEvents
 		return nil, fmt.Errorf("unable to retrieve calendar client: %v", err)
 	}
 
-	t := time.Now().Format(time.RFC3339)
-	events, err := srv.Events.List(req.CalendarId).ShowDeleted(false).
-		SingleEvents(true).TimeMin(t).MaxResults(10).OrderBy("startTime").Do()
+	call := srv.Events.List(req.CalendarId).ShowDeleted(req.ShowDeleted).SingleEvents(true)
+
+	if !req.StartDate.IsZero() {
+		call.TimeMin(req.StartDate.Format(time.RFC3339))
+	}
+	if !req.EndDate.IsZero() {
+		call.TimeMax(req.EndDate.Format(time.RFC3339))
+	}
+
+	if req.PageToken != "" {
+		call.PageToken(req.PageToken)
+	}
+	if req.SyncToken != "" {
+		call.SyncToken(req.SyncToken)
+	}
+
+	call.MaxResults(100).OrderBy("startTime")
+
+	events, err := call.Do()
 	if err != nil {
 		return nil, fmt.Errorf("unable to retrieve user's events: %v", err)
 	}
