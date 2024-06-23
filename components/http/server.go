@@ -377,8 +377,6 @@ func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Hand
 
 	<-serverCtx.Done()
 
-	fmt.Println("!!! Shutdown http server")
-
 	shutdownCtx, shutDownCancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer shutDownCancel()
 
@@ -492,7 +490,7 @@ func (h *Server) Ports() []module.NodePort {
 
 	ports := []module.NodePort{
 		{
-			Name: module.HttpPort,
+			Name: module.HttpPort, // to receive http upgrader
 		},
 		{
 			Name:          module.SettingsPort,
@@ -531,7 +529,6 @@ func (h *Server) Ports() []module.NodePort {
 			Position:      module.Left,
 			Configuration: h.startSettings,
 		})
-
 	}
 
 	// programmatically stop server

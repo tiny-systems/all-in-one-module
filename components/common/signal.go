@@ -9,32 +9,32 @@ import (
 
 const (
 	SignalComponent        = "signal"
-	StartOutPort    string = "out"
+	SignalOutPort   string = "out"
 )
 
-type StartContext any
+type SignalContext any
 
-type StartSettings struct {
-	Context StartContext `json:"context" configurable:"true" title:"Context" description:"Arbitrary message to send" propertyOrder:"1"`
-	Auto    bool         `json:"auto" title:"Auto send" description:"Send signal automatically" propertyOrder:"2"`
+type SignalSettings struct {
+	Context SignalContext `json:"context" configurable:"true" title:"Context" description:"Arbitrary message to send" propertyOrder:"1"`
+	Auto    bool          `json:"auto" title:"Auto send" required:"true" description:"Send signal automatically" propertyOrder:"2"`
 }
 
-type Start struct {
-	settings StartSettings
+type Signal struct {
+	settings SignalSettings
 }
 
-type StartControl struct {
-	Send    bool         `json:"send" format:"button" title:"Send" required:"true" propertyOrder:"1"`
-	Context StartContext `json:"context" propertyOrder:"2" title:"Context"`
+type SignalControl struct {
+	Send    bool          `json:"send" format:"button" title:"Send" required:"true" propertyOrder:"1"`
+	Context SignalContext `json:"context" propertyOrder:"2" title:"Context"`
 }
 
-func (t *Start) Instance() module.Component {
-	return &Start{
-		settings: StartSettings{},
+func (t *Signal) Instance() module.Component {
+	return &Signal{
+		settings: SignalSettings{},
 	}
 }
 
-func (t *Start) GetInfo() module.ComponentInfo {
+func (t *Signal) GetInfo() module.ComponentInfo {
 	return module.ComponentInfo{
 		Name:        SignalComponent,
 		Description: "Signal",
@@ -43,30 +43,30 @@ func (t *Start) GetInfo() module.ComponentInfo {
 	}
 }
 
-func (t *Start) Handle(ctx context.Context, handle module.Handler, port string, msg interface{}) error {
+func (t *Signal) Handle(ctx context.Context, handle module.Handler, port string, msg interface{}) error {
 
 	switch port {
 	case module.ControlPort:
-		in, ok := msg.(StartControl)
+		in, ok := msg.(SignalControl)
 		if !ok {
 			return fmt.Errorf("invalid input msg")
 		}
-		_ = handle(ctx, StartOutPort, in.Context)
+		_ = handle(ctx, SignalOutPort, in.Context)
 
 	case module.SettingsPort:
-		in, ok := msg.(StartSettings)
+		in, ok := msg.(SignalSettings)
 		if !ok {
 			return fmt.Errorf("invalid settings")
 		}
 		t.settings = in
 		if t.settings.Auto {
-			return handle(ctx, StartOutPort, in.Context)
+			return handle(ctx, SignalOutPort, in.Context)
 		}
 	}
 	return nil
 }
 
-func (t *Start) Ports() []module.NodePort {
+func (t *Signal) Ports() []module.NodePort {
 	return []module.NodePort{
 		{
 			Name:          module.SettingsPort,
@@ -75,24 +75,24 @@ func (t *Start) Ports() []module.NodePort {
 			Configuration: t.settings,
 		},
 		{
-			Name:          StartOutPort,
+			Name:          SignalOutPort,
 			Label:         "Out",
 			Source:        false,
 			Position:      module.Right,
-			Configuration: new(StartContext),
+			Configuration: new(SignalContext),
 		},
 		{
 			Name:  module.ControlPort,
 			Label: "Control",
-			Configuration: StartControl{
+			Configuration: SignalControl{
 				Context: t.settings.Context,
 			},
 		},
 	}
 }
 
-var _ module.Component = (*Start)(nil)
+var _ module.Component = (*Signal)(nil)
 
 func init() {
-	registry.Register(&Start{})
+	registry.Register(&Signal{})
 }

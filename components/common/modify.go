@@ -34,7 +34,7 @@ func (t *Modify) GetInfo() module.ComponentInfo {
 	return module.ComponentInfo{
 		Name:        ModifyComponent,
 		Description: "Modify",
-		Info:        "Sends a new message after any incoming message received",
+		Info:        "Sends a new message after incoming message received",
 		Tags:        []string{"SDK"},
 	}
 }
