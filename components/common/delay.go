@@ -60,8 +60,8 @@ func (t *Delay) Handle(ctx context.Context, handler module.Handler, port string,
 	return nil
 }
 
-func (t *Delay) Ports() []module.NodePort {
-	return []module.NodePort{
+func (t *Delay) Ports() []module.Port {
+	return []module.Port{
 		{
 			Name:   DelayInPort,
 			Label:  "In",

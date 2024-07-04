@@ -144,8 +144,8 @@ func (h *CalendarChannelWatch) watch(ctx context.Context, req CalendarChannelWat
 	}).Do()
 }
 
-func (h *CalendarChannelWatch) Ports() []module.NodePort {
-	ports := []module.NodePort{
+func (h *CalendarChannelWatch) Ports() []module.Port {
+	ports := []module.Port{
 		{
 			Name:          module.SettingsPort,
 			Label:         "Settings",
@@ -177,7 +177,7 @@ func (h *CalendarChannelWatch) Ports() []module.NodePort {
 	if !h.settings.EnableErrorPort {
 		return ports
 	}
-	return append(ports, module.NodePort{
+	return append(ports, module.Port{
 		Name:          CalendarChannelWatchErrorPort,
 		Label:         "Error",
 		Source:        false,

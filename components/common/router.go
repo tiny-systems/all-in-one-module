@@ -117,7 +117,7 @@ func (t *Router) Handle(ctx context.Context, handler module.Handler, port string
 }
 
 // Ports drop settings, make it port payload
-func (t *Router) Ports() []module.NodePort {
+func (t *Router) Ports() []module.Port {
 
 	val := "A"
 	if len(t.settings.Routes) > 0 {
@@ -131,7 +131,7 @@ func (t *Router) Ports() []module.NodePort {
 		}},
 	}
 
-	ports := []module.NodePort{
+	ports := []module.Port{
 		{
 			Name:          module.SettingsPort,
 			Label:         "Settings",
@@ -157,7 +157,7 @@ func (t *Router) Ports() []module.NodePort {
 		},
 	}
 	for _, r := range t.settings.Routes {
-		ports = append(ports, module.NodePort{
+		ports = append(ports, module.Port{
 			Position:      module.Right,
 			Name:          getPortNameFromRoute(r),
 			Label:         strings.ToTitle(r),

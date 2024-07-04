@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	EngineComponent    = "template-engine"
+	EngineComponent    = "template_engine"
 	EngineRequestPort  = "request"
 	EngineResponsePort = "response"
 	EngineErrorPort    = "error"
@@ -124,7 +124,7 @@ func (h *Engine) GetInfo() module.ComponentInfo {
 	return module.ComponentInfo{
 		Name:        EngineComponent,
 		Description: "Template engine",
-		Info:        "Renders templates using html/template standard package",
+		Info:        "Renders templates using go's html/template standard package",
 		Tags:        []string{"html", "template", "engine"},
 	}
 }
@@ -210,8 +210,8 @@ func (h *Engine) Handle(ctx context.Context, handler module.Handler, port string
 	return nil
 }
 
-func (h *Engine) Ports() []module.NodePort {
-	ports := []module.NodePort{
+func (h *Engine) Ports() []module.Port {
+	ports := []module.Port{
 		{
 			Name:          EngineRequestPort,
 			Label:         "Request",
@@ -235,7 +235,7 @@ func (h *Engine) Ports() []module.NodePort {
 	if !h.settings.EnableErrorPort {
 		return ports
 	}
-	return append(ports, module.NodePort{
+	return append(ports, module.Port{
 		Position:      module.Bottom,
 		Name:          EngineErrorPort,
 		Label:         "Error",

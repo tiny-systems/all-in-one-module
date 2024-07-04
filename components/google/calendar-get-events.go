@@ -145,8 +145,8 @@ func (c *CalendarGetEvents) getEvents(ctx context.Context, req CalendarGetEvents
 	return events, nil
 }
 
-func (c *CalendarGetEvents) Ports() []module.NodePort {
-	ports := []module.NodePort{
+func (c *CalendarGetEvents) Ports() []module.Port {
+	ports := []module.Port{
 		{
 			Name:          module.SettingsPort,
 			Label:         "Settings",
@@ -180,7 +180,7 @@ func (c *CalendarGetEvents) Ports() []module.NodePort {
 		return ports
 	}
 
-	return append(ports, module.NodePort{
+	return append(ports, module.Port{
 		Position:      module.Bottom,
 		Name:          CalendarGetEventsErrorPort,
 		Label:         "Error",

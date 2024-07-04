@@ -105,8 +105,8 @@ func (a *ExchangeAuthCode) Handle(ctx context.Context, output module.Handler, po
 
 }
 
-func (a *ExchangeAuthCode) Ports() []module.NodePort {
-	ports := []module.NodePort{
+func (a *ExchangeAuthCode) Ports() []module.Port {
+	ports := []module.Port{
 		{
 			Name:          module.SettingsPort,
 			Label:         "Settings",
@@ -133,7 +133,7 @@ func (a *ExchangeAuthCode) Ports() []module.NodePort {
 		return ports
 	}
 
-	return append(ports, module.NodePort{
+	return append(ports, module.Port{
 		Position:      module.Bottom,
 		Name:          "error",
 		Label:         "Error",

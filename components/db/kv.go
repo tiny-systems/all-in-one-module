@@ -183,8 +183,8 @@ func (k *KeyValueStore) Handle(ctx context.Context, output module.Handler, port 
 	})
 }
 
-func (k *KeyValueStore) Ports() []module.NodePort {
-	ports := []module.NodePort{
+func (k *KeyValueStore) Ports() []module.Port {
+	ports := []module.Port{
 		{
 			Name:   PortQuery,
 			Label:  "Query",
@@ -224,7 +224,7 @@ func (k *KeyValueStore) Ports() []module.NodePort {
 		},
 	}
 	if k.settings.EnableStoreAckPort {
-		ports = append(ports, module.NodePort{
+		ports = append(ports, module.Port{
 			Name:          PortStoreAck,
 			Label:         "Store ack",
 			Source:        false,

@@ -86,8 +86,8 @@ func (t *Ticker) Handle(ctx context.Context, handler module.Handler, port string
 	return fmt.Errorf("invalid message")
 }
 
-func (t *Ticker) Ports() []module.NodePort {
-	ports := []module.NodePort{
+func (t *Ticker) Ports() []module.Port {
+	ports := []module.Port{
 		{
 			Name:   TickerStatusPort,
 			Label:  "Status",
@@ -114,7 +114,7 @@ func (t *Ticker) Ports() []module.NodePort {
 		},
 	}
 	if t.settings.EnableControlPort {
-		ports = append(ports, module.NodePort{
+		ports = append(ports, module.Port{
 			Position:      module.Left,
 			Name:          module.ControlPort,
 			Label:         "Control",

@@ -159,8 +159,8 @@ func (s *Scheduler) waitTask(ctx context.Context, d *task) {
 	}
 }
 
-func (s *Scheduler) Ports() []module.NodePort {
-	ports := []module.NodePort{
+func (s *Scheduler) Ports() []module.Port {
+	ports := []module.Port{
 		{
 			Name:          module.SettingsPort,
 			Label:         "Settings",
@@ -193,7 +193,7 @@ func (s *Scheduler) Ports() []module.NodePort {
 		return ports
 	}
 
-	return append(ports, module.NodePort{
+	return append(ports, module.Port{
 		Name:          SchedulerAckPort,
 		Label:         "Ack",
 		Source:        false,

@@ -108,8 +108,8 @@ func getAuthUrl(_ context.Context, in GetAuthUrlInMessage) (string, error) {
 	return config.AuthCodeURL("state-token", opts...), nil
 }
 
-func (a *GetAuthUrl) Ports() []module.NodePort {
-	ports := []module.NodePort{
+func (a *GetAuthUrl) Ports() []module.Port {
+	ports := []module.Port{
 		{
 			Source:   true,
 			Name:     GetAuthUrlRequestPort,
@@ -139,7 +139,7 @@ func (a *GetAuthUrl) Ports() []module.NodePort {
 		return ports
 	}
 
-	return append(ports, module.NodePort{
+	return append(ports, module.Port{
 		Position:      module.Bottom,
 		Name:          GetAuthUrlErrorPort,
 		Label:         "Error",

@@ -106,8 +106,8 @@ func (h Client) Handle(ctx context.Context, handler module.Handler, port string,
 	})
 }
 
-func (h Client) Ports() []module.NodePort {
-	ports := []module.NodePort{
+func (h Client) Ports() []module.Port {
+	ports := []module.Port{
 		{
 			Name:   ClientRequestPort,
 			Label:  "Request",
@@ -130,7 +130,7 @@ func (h Client) Ports() []module.NodePort {
 	if !h.settings.EnableErrorPort {
 		return ports
 	}
-	return append(ports, module.NodePort{
+	return append(ports, module.Port{
 		Name:          ClientErrorPort,
 		Label:         "Error",
 		Source:        false,

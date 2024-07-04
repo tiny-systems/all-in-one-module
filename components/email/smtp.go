@@ -159,8 +159,8 @@ func (t *SmtpSender) Handle(ctx context.Context, responseHandler module.Handler,
 	return err
 }
 
-func (t *SmtpSender) Ports() []module.NodePort {
-	ports := []module.NodePort{
+func (t *SmtpSender) Ports() []module.Port {
+	ports := []module.Port{
 		{
 			Name:   module.SettingsPort,
 			Label:  "Settings",
@@ -190,7 +190,7 @@ func (t *SmtpSender) Ports() []module.NodePort {
 		},
 	}
 	if t.settings.EnableResponsePort {
-		ports = append(ports, module.NodePort{
+		ports = append(ports, module.Port{
 			Position:      module.Right,
 			Name:          PortResponse,
 			Label:         "Response",
@@ -203,7 +203,7 @@ func (t *SmtpSender) Ports() []module.NodePort {
 		return ports
 	}
 
-	return append(ports, module.NodePort{
+	return append(ports, module.Port{
 		Position:      module.Bottom,
 		Name:          PortError,
 		Label:         "Error",

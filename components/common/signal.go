@@ -43,7 +43,7 @@ func (t *Signal) GetInfo() module.ComponentInfo {
 	}
 }
 
-func (t *Signal) Handle(ctx context.Context, handle module.Handler, port string, msg interface{}) error {
+func (t *Signal) Handle(ctx context.Context, handler module.Handler, port string, msg interface{}) error {
 
 	switch port {
 	case module.ControlPort:
@@ -51,7 +51,10 @@ func (t *Signal) Handle(ctx context.Context, handle module.Handler, port string,
 		if !ok {
 			return fmt.Errorf("invalid input msg")
 		}
-		_ = handle(ctx, SignalOutPort, in.Context)
+
+		t.settings.Context = in.Context
+		_ = handler(ctx, module.ReconcilePort, nil)
+		_ = handler(ctx, SignalOutPort, in.Context)
 
 	case module.SettingsPort:
 		in, ok := msg.(SignalSettings)
@@ -59,15 +62,17 @@ func (t *Signal) Handle(ctx context.Context, handle module.Handler, port string,
 			return fmt.Errorf("invalid settings")
 		}
 		t.settings = in
+
 		if t.settings.Auto {
-			return handle(ctx, SignalOutPort, in.Context)
+			return handler(ctx, SignalOutPort, in.Context)
 		}
 	}
 	return nil
 }
 
-func (t *Signal) Ports() []module.NodePort {
-	return []module.NodePort{
+func (t *Signal) Ports() []module.Port {
+
+	return []module.Port{
 		{
 			Name:          module.SettingsPort,
 			Label:         "Settings",

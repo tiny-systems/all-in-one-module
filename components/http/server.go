@@ -10,6 +10,7 @@ import (
 	"github.com/swaggest/jsonschema-go"
 	"github.com/tiny-systems/main/pkg/ttlmap"
 	"github.com/tiny-systems/main/pkg/utils"
+	"github.com/tiny-systems/module/api/v1alpha1"
 	"github.com/tiny-systems/module/module"
 	"github.com/tiny-systems/module/registry"
 	"go.uber.org/atomic"
@@ -18,6 +19,7 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -50,8 +52,7 @@ type Server struct {
 	//
 	startSettings ServerStart
 	//
-	contexts      *ttlmap.TTLMap
-	addressGetter module.ListenAddressGetter
+	contexts *ttlmap.TTLMap
 
 	publicListenAddrLock *sync.Mutex
 	publicListenAddr     []string
@@ -65,6 +66,10 @@ type Server struct {
 	startContext ServerStartContext
 	startErr     *atomic.Error
 	//
+	node v1alpha1.TinyNode
+
+	// k8s client wrapper
+	client module.Client
 }
 
 func (h *Server) Instance() module.Component {
@@ -201,6 +206,9 @@ func (h *Server) isRunning() bool {
 
 func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Handler) error {
 	//
+	if h.client == nil {
+		return fmt.Errorf("unable to start, no client available")
+	}
 	h.startContext = msg.Context
 
 	if err := h.stop(); err != nil {
@@ -336,12 +344,12 @@ func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Hand
 	e.Server.WriteTimeout = time.Duration(msg.WriteTimeout) * time.Second
 
 	var (
-		upgrade    module.AddressUpgrade
-		listenPort int
+		listenPort      int
+		actualLocalPort int
 	)
 
-	if h.addressGetter != nil {
-		listenPort, upgrade = h.addressGetter()
+	if annotationPort, err := strconv.Atoi(h.node.Labels[v1alpha1.SuggestedHttpPortAnnotation]); err == nil {
+		listenPort = annotationPort
 	}
 
 	var listenAddr = ":0"
@@ -359,13 +367,30 @@ func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Hand
 	}()
 
 	time.Sleep(time.Millisecond * 1500)
+
 	if e.Listener != nil {
 		if tcpAddr, ok := e.Listener.Addr().(*net.TCPAddr); ok {
-			publicHostnames, err := upgrade(ctx, msg.AutoHostName, msg.Hostnames, tcpAddr.Port)
+			//
+
+			actualLocalPort = tcpAddr.Port
+			//
+			exposeCtx, cancel := context.WithTimeout(ctx, time.Second*15)
+			defer cancel()
+
+			// upgrade
+			// hostname it's a last part of the node name
+			var autoHostName string
+
+			if msg.AutoHostName {
+				autoHostNameParts := strings.Split(h.node.Name, ".")
+				autoHostName = autoHostNameParts[len(autoHostNameParts)-1]
+			}
+
+			publicURLs, err := h.client.ExposePort(exposeCtx, autoHostName, msg.Hostnames, tcpAddr.Port)
 			if err != nil {
 				h.setPublicListerAddr([]string{fmt.Sprintf("http://localhost:%d", tcpAddr.Port)})
 			} else {
-				h.setPublicListerAddr(publicHostnames)
+				h.setPublicListerAddr(publicURLs)
 			}
 		}
 	}
@@ -382,6 +407,12 @@ func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Hand
 
 	_ = e.Shutdown(shutdownCtx)
 	h.setCancelFunc(nil)
+
+	//
+	discloseCtx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	_ = h.client.DisclosePort(discloseCtx, actualLocalPort)
 
 	// send status when we stopped
 	_ = h.sendStatus(ctx, msg.Context, handler)
@@ -406,9 +437,11 @@ func (h *Server) getPublicListerAddr() []string {
 func (h *Server) Handle(ctx context.Context, handler module.Handler, port string, msg interface{}) error {
 
 	switch port {
-	case module.HttpPort:
-		h.addressGetter, _ = msg.(module.ListenAddressGetter)
-		return nil
+	case module.NodePort:
+		h.node, _ = msg.(v1alpha1.TinyNode)
+
+	case module.ClientPort:
+		h.client, _ = msg.(module.Client)
 
 	case module.ControlPort:
 		if msg == nil {
@@ -420,8 +453,7 @@ func (h *Server) Handle(ctx context.Context, handler module.Handler, port string
 			return h.start(ctx, h.startSettings, handler)
 
 		case ServerStopControl:
-			err := h.stop()
-			return err
+			return h.stop()
 		}
 
 	case module.SettingsPort:
@@ -434,8 +466,6 @@ func (h *Server) Handle(ctx context.Context, handler module.Handler, port string
 		h.settings = in
 		h.settingsLock.Unlock()
 
-		return nil
-
 	case ServerStartPort:
 		in, ok := msg.(ServerStart)
 		if !ok {
@@ -445,8 +475,7 @@ func (h *Server) Handle(ctx context.Context, handler module.Handler, port string
 		return h.start(ctx, in, handler)
 
 	case ServerStopPort:
-		err := h.stop()
-		return err
+		return h.stop()
 
 	case ServerResponsePort:
 		in, ok := msg.(ServerResponse)
@@ -466,9 +495,12 @@ func (h *Server) Handle(ctx context.Context, handler module.Handler, port string
 		if respChannel, ok := ch.(chan ServerResponse); ok {
 			respChannel <- in
 		}
-		return nil
+
+	default:
+		return fmt.Errorf("port %s is not supported", port)
 	}
-	return fmt.Errorf("port %s is not supported", port)
+
+	return nil
 }
 
 func (h *Server) getControl() interface{} {
@@ -483,14 +515,17 @@ func (h *Server) getControl() interface{} {
 	}
 }
 
-func (h *Server) Ports() []module.NodePort {
+func (h *Server) Ports() []module.Port {
 
 	h.settingsLock.Lock()
 	defer h.settingsLock.Unlock()
 
-	ports := []module.NodePort{
+	ports := []module.Port{
 		{
-			Name: module.HttpPort, // to receive http upgrader
+			Name: module.NodePort, // to receive tiny node
+		},
+		{
+			Name: module.ClientPort, // to receive k8s client
 		},
 		{
 			Name:          module.SettingsPort,
@@ -522,7 +557,7 @@ func (h *Server) Ports() []module.NodePort {
 
 	if h.settings.EnableStartPort {
 
-		ports = append(ports, module.NodePort{
+		ports = append(ports, module.Port{
 			Name:          ServerStartPort,
 			Label:         "Start",
 			Source:        true,
@@ -533,7 +568,7 @@ func (h *Server) Ports() []module.NodePort {
 
 	// programmatically stop server
 	if h.settings.EnableStopPort {
-		ports = append(ports, module.NodePort{
+		ports = append(ports, module.Port{
 			Position:      module.Left,
 			Name:          ServerStopPort,
 			Label:         "Stop",
@@ -545,7 +580,7 @@ func (h *Server) Ports() []module.NodePort {
 	// programmatically use status in flows
 
 	if h.settings.EnableStatusPort {
-		ports = append(ports, module.NodePort{
+		ports = append(ports, module.Port{
 			Position:      module.Bottom,
 			Name:          ServerStatusPort,
 			Label:         "Status",

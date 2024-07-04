@@ -48,8 +48,8 @@ func (t *Modify) Handle(ctx context.Context, handler module.Handler, port string
 	return fmt.Errorf("invalid message")
 }
 
-func (t *Modify) Ports() []module.NodePort {
-	return []module.NodePort{
+func (t *Modify) Ports() []module.Port {
+	return []module.Port{
 		{
 			Name:          ModifyInPort,
 			Label:         "In",

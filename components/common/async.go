@@ -52,8 +52,8 @@ func (t *Async) Handle(ctx context.Context, handler module.Handler, port string,
 	return fmt.Errorf("invalid message")
 }
 
-func (t *Async) Ports() []module.NodePort {
-	return []module.NodePort{
+func (t *Async) Ports() []module.Port {
+	return []module.Port{
 		{
 			Name:          AsyncInPort,
 			Label:         "In",

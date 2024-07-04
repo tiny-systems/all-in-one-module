@@ -102,8 +102,8 @@ func (t *ChannelSender) Handle(ctx context.Context, responseHandler module.Handl
 	return err
 }
 
-func (t *ChannelSender) Ports() []module.NodePort {
-	ports := []module.NodePort{
+func (t *ChannelSender) Ports() []module.Port {
+	ports := []module.Port{
 		{
 			Name:          module.SettingsPort,
 			Label:         "Settings",
@@ -123,7 +123,7 @@ func (t *ChannelSender) Ports() []module.NodePort {
 		},
 	}
 	if t.settings.EnableSuccessPort {
-		ports = append(ports, module.NodePort{
+		ports = append(ports, module.Port{
 			Position:      module.Right,
 			Name:          PortResponse,
 			Label:         "Response",
@@ -135,7 +135,7 @@ func (t *ChannelSender) Ports() []module.NodePort {
 	if !t.settings.EnableErrorPort {
 		return ports
 	}
-	return append(ports, module.NodePort{
+	return append(ports, module.Port{
 		Position:      module.Bottom,
 		Name:          PortRequest,
 		Label:         "Error",

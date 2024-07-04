@@ -34,7 +34,7 @@ func (t *Debug) GetInfo() module.ComponentInfo {
 	return module.ComponentInfo{
 		Name:        DebugComponent,
 		Description: "Debug",
-		Info:        "Consumes any data without sending it anywhere.",
+		Info:        "Consumes any data without sending it anywhere. Display the latest message.",
 		Tags:        []string{"SDK"},
 	}
 }
@@ -60,8 +60,8 @@ func (t *Debug) Handle(ctx context.Context, output module.Handler, port string, 
 	return fmt.Errorf("unknown port: %s", port)
 }
 
-func (t *Debug) Ports() []module.NodePort {
-	return []module.NodePort{
+func (t *Debug) Ports() []module.Port {
+	return []module.Port{
 		{
 			Name:          DebugInPort,
 			Label:         "In",

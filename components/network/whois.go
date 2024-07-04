@@ -94,8 +94,8 @@ func (t *Whois) Handle(ctx context.Context, handler module.Handler, port string,
 	return handler(ctx, DomainWhoisResponsePort, resp)
 }
 
-func (t *Whois) Ports() []module.NodePort {
-	return []module.NodePort{
+func (t *Whois) Ports() []module.Port {
+	return []module.Port{
 		{
 			Name:   DomainWhoisRequestPort,
 			Label:  "Request",
