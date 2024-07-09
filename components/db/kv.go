@@ -8,7 +8,6 @@ import (
 	"github.com/spyzhov/ajson"
 	"github.com/swaggest/jsonschema-go"
 	"github.com/tiny-systems/module/module"
-	"github.com/tiny-systems/module/registry"
 )
 
 type KeyValueQueryRequestContext any
@@ -245,5 +244,5 @@ func (k *KeyValueStore) Instance() module.Component {
 var _ module.Component = (*KeyValueStore)(nil)
 
 func init() {
-	registry.Register(&KeyValueStore{})
+	//registry.Register(&KeyValueStore{})
 }

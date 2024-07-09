@@ -51,7 +51,8 @@ type Condition struct {
 }
 
 type RouterSettings struct {
-	Routes []string `json:"routes,omitempty" required:"true" title:"Routes" minItems:"1" uniqueItems:"true"`
+	Routes            []string `json:"routes,omitempty" required:"true" title:"Routes" minItems:"1" uniqueItems:"true"`
+	EnableDefaultPort bool     `json:"enableDefaultPort" required:"true" title:"Enable default port"`
 }
 
 type RouterContext any
@@ -99,21 +100,26 @@ func (t *Router) Handle(ctx context.Context, handler module.Handler, port string
 		return nil
 	}
 
-	if in, ok := msg.(RouterInMessage); ok {
-		for _, condition := range in.Conditions {
-			if condition.Condition {
-				return handler(ctx, getPortNameFromRoute(condition.RouteName.Value), RouterOutMessage{
-					Context: in.Context,
-					Route:   condition.RouteName.Value,
-				})
-			}
-		}
-		return handler(ctx, RouterDefaultPort, RouterOutMessage{
-			Context: in.Context,
-			Route:   RouterDefaultPort,
-		})
+	in, ok := msg.(RouterInMessage)
+	if !ok {
+		return fmt.Errorf("invalid message")
 	}
-	return fmt.Errorf("invalid message")
+
+	for _, condition := range in.Conditions {
+		if condition.Condition {
+			return handler(ctx, getPortNameFromRoute(condition.RouteName.Value), RouterOutMessage{
+				Context: in.Context,
+				Route:   condition.RouteName.Value,
+			})
+		}
+	}
+	if !t.settings.EnableDefaultPort {
+		return nil
+	}
+	return handler(ctx, RouterDefaultPort, RouterOutMessage{
+		Context: in.Context,
+		Route:   RouterDefaultPort,
+	})
 }
 
 // Ports drop settings, make it port payload
@@ -145,16 +151,6 @@ func (t *Router) Ports() []module.Port {
 			Source:        true,
 			Configuration: inMessage,
 		},
-		{
-			Position: module.Bottom,
-			Name:     RouterDefaultPort,
-			Label:    "DEFAULT",
-			Source:   false,
-			Configuration: RouterOutMessage{
-				Context: inMessage.Context,
-				Route:   RouterDefaultPort,
-			},
-		},
 	}
 	for _, r := range t.settings.Routes {
 		ports = append(ports, module.Port{
@@ -163,6 +159,18 @@ func (t *Router) Ports() []module.Port {
 			Label:         strings.ToTitle(r),
 			Source:        false,
 			Configuration: RouterOutMessage{},
+		})
+	}
+	if t.settings.EnableDefaultPort {
+		ports = append(ports, module.Port{
+			Position: module.Bottom,
+			Name:     RouterDefaultPort,
+			Label:    "Default",
+			Source:   false,
+			Configuration: RouterOutMessage{
+				Context: inMessage.Context,
+				Route:   RouterDefaultPort,
+			},
 		})
 	}
 	return ports
