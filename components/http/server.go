@@ -374,7 +374,7 @@ func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Hand
 
 			actualLocalPort = tcpAddr.Port
 			//
-			exposeCtx, cancel := context.WithTimeout(ctx, time.Second*15)
+			exposeCtx, cancel := context.WithTimeout(ctx, time.Second*30)
 			defer cancel()
 
 			// upgrade
@@ -402,14 +402,14 @@ func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Hand
 
 	<-serverCtx.Done()
 
-	shutdownCtx, shutDownCancel := context.WithTimeout(context.Background(), time.Second*10)
+	shutdownCtx, shutDownCancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer shutDownCancel()
 
 	_ = e.Shutdown(shutdownCtx)
 	h.setCancelFunc(nil)
 
 	//
-	discloseCtx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	discloseCtx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
 
 	_ = h.client.DisclosePort(discloseCtx, actualLocalPort)
