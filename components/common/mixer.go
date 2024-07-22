@@ -22,11 +22,11 @@ type MixerInputAContext any
 type MixerInputBContext any
 
 type MixerInputA struct {
-	Context MixerInputAContext `json:"context" configurable:"true" required:"true" title:"Context" description:"Arbitrary message"`
+	Context MixerInputAContext `json:"context" configurable:"true" required:"true" title:"Context" description:"Arbitrary message A"`
 }
 
 type MixerInputB struct {
-	Context MixerInputBContext `json:"context" configurable:"true" required:"true" title:"Context" description:"Arbitrary message"`
+	Context MixerInputBContext `json:"context" configurable:"true" required:"true" title:"Context" description:"Arbitrary message B"`
 }
 
 type MixerOutput struct {
@@ -47,10 +47,18 @@ func (m *Mixer) Handle(ctx context.Context, output module.Handler, port string, 
 
 	switch port {
 	case MixerPortB:
-		m.b = message.(MixerInputBContext)
+		msg, ok := message.(MixerInputB)
+		if !ok {
+			return fmt.Errorf("invalid message type: %T", message)
+		}
+		m.b = msg.Context
 		return m.send(ctx, output)
 	case MixerPortA:
-		m.a = message.(MixerInputAContext)
+		msg, ok := message.(MixerInputA)
+		if !ok {
+			return fmt.Errorf("invalid message type: %T", message)
+		}
+		m.a = msg.Context
 		return m.send(ctx, output)
 	default:
 		return fmt.Errorf("unknown port: %s", port)
