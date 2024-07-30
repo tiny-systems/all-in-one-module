@@ -18,6 +18,7 @@ import (
 	"github.com/tiny-systems/module/cli"
 	"os"
 	"os/signal"
+	"syscall"
 )
 
 // RootCmd represents the base command when called without any subcommands
@@ -37,7 +38,7 @@ func main() {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	}
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	cli.RegisterCommands(rootCmd)
