@@ -24,8 +24,8 @@ type Signal struct {
 }
 
 type SignalControl struct {
-	Send    bool          `json:"send" format:"button" title:"Send" required:"true" propertyOrder:"1"`
-	Context SignalContext `json:"context" required:"true" propertyOrder:"2" title:"Context"`
+	Context SignalContext `json:"context" required:"true" propertyOrder:"1" title:"Context"`
+	Send    bool          `json:"send" format:"button" title:"Send" required:"true" propertyOrder:"2"`
 }
 
 func (t *Signal) Instance() module.Component {

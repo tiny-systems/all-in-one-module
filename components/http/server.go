@@ -398,7 +398,6 @@ func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Hand
 	// send status that we run
 	_ = h.sendStatus(ctx, msg.Context, handler)
 	// ask to reconcile (redraw the component)
-	_ = handler(ctx, module.ReconcilePort, nil)
 
 	<-serverCtx.Done()
 
@@ -417,7 +416,6 @@ func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Hand
 	// send status when we stopped
 	_ = h.sendStatus(ctx, msg.Context, handler)
 	// ask to reconcile (redraw the component)
-	_ = handler(ctx, module.ReconcilePort, nil)
 
 	return h.startErr.Load()
 }
@@ -599,6 +597,8 @@ func (h *Server) getStatus() ServerStatus {
 }
 
 func (h *Server) sendStatus(ctx context.Context, start ServerStartContext, handler module.Handler) error {
+	_ = handler(ctx, module.ReconcilePort, nil)
+
 	if !h.settings.EnableStatusPort {
 		return nil
 	}
