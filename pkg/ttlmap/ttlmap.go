@@ -55,6 +55,13 @@ func (m *TTLMap) Put(k string, v interface{}) {
 	m.l.Unlock()
 }
 
+func (m *TTLMap) Delete(k string) (v interface{}) {
+	m.l.Lock()
+	delete(m.m, k)
+	m.l.Unlock()
+	return
+}
+
 func (m *TTLMap) Get(k string) (v interface{}) {
 	m.l.RLock()
 	if it, ok := m.m[k]; ok {

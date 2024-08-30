@@ -491,6 +491,7 @@ func (h *Server) Handle(ctx context.Context, handler module.Handler, port string
 		}
 
 		if respChannel, ok := ch.(chan ServerResponse); ok {
+			h.contexts.Delete(in.RequestID)
 			respChannel <- in
 		}
 
@@ -520,7 +521,7 @@ func (h *Server) Ports() []module.Port {
 
 	ports := []module.Port{
 		{
-			Name: module.NodePort, // to receive tiny node
+			Name: module.NodePort, // to receive tiny node instance
 		},
 		{
 			Name: module.ClientPort, // to receive k8s client
