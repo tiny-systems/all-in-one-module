@@ -17,9 +17,8 @@ const (
 )
 
 type SenderSettings struct {
-	SmtpSettings       SmtpServerSettings `json:"smtpSettings" required:"true" title:"SMTP Settings" propertyOrder:"1"`
-	EnableErrorPort    bool               `json:"enableErrorPort" required:"true" title:"Enable Error Port" description:"If error happen during mail send, error port will emit an error message" propertyOrder:"2"`
-	EnableResponsePort bool               `json:"enableResponsePort" required:"true" title:"Enable Response port" propertyOrder:"3"`
+	EnableErrorPort    bool `json:"enableErrorPort" required:"true" title:"Enable Error Port" description:"If error happen during mail send, error port will emit an error message"`
+	EnableResponsePort bool `json:"enableResponsePort" required:"true" title:"Enable Response port"`
 }
 
 type Recipient struct {
@@ -30,21 +29,24 @@ type Recipient struct {
 type SendEmailContext any
 
 type SendEmail struct {
-	Context     SendEmailContext `json:"context" configurable:"true" title:"Context" propertyOrder:"1"`
-	ContentType string           `json:"contentType" required:"true" title:"Content type" enum:"text/plain,text/html,application/octet-stream" propertyOrder:"2"`
-	From        string           `json:"from" title:"From" propertyOrder:"3"`
-	To          []Recipient      `json:"to,omitempty" required:"true" description:"List of recipients" title:"To" uniqueItems:"true" minItems:"1" propertyOrder:"4"`
+	Context      SendEmailContext   `json:"context" configurable:"true" title:"Context"`
+	SmtpSettings SmtpServerSettings `json:"smtpSettings" required:"true" title:"SMTP Settings"`
 
-	Body    string `json:"body" title:"Email body" format:"textarea" propertyOrder:"5"`
-	Subject string `json:"subject" title:"Subject" propertyOrder:"6"`
+	ContentType string `json:"contentType" required:"true" title:"Content type" enum:"text/plain,text/html,application/octet-stream"`
+
+	From string      `json:"from" title:"From"`
+	To   []Recipient `json:"to,omitempty" required:"true" description:"List of recipients" title:"To" uniqueItems:"true" minItems:"1"`
+
+	Subject string `json:"subject" title:"Subject"`
+	Body    string `json:"body" title:"Email body" format:"textarea"`
 }
 
 type SmtpServerSettings struct {
-	Host     string `json:"host" required:"true" minLength:"1" title:"SMTP Host" propertyOrder:"1"`
-	Port     int    `json:"port" required:"true" title:"SMTP Port" propertyOrder:"2"`
-	Username string `json:"username" title:"SMTP username" required:"true" propertyOrder:"3"`
-	Password string `json:"password" title:"SMTP password" required:"true" propertyOrder:"4"`
-	Test     bool   `json:"test" format:"button" title:"Test connection" required:"true" propertyOrder:"5"`
+	Host     string `json:"host" required:"true" minLength:"1" title:"SMTP Host"`
+	Port     int    `json:"port" required:"true" title:"SMTP Port"`
+	Username string `json:"username" title:"SMTP username" required:"true"`
+	Password string `json:"password" title:"SMTP password" required:"true"`
+	Test     bool   `json:"test" format:"button" title:"Test connection" required:"true"`
 }
 
 type SendMessageSuccess struct {
@@ -85,8 +87,8 @@ func (t *SmtpSender) send(ctx context.Context, sendMsg SendEmail) (string, error
 		return "", err
 	}
 
-	client, err := mail.NewClient(t.settings.SmtpSettings.Host, mail.WithPort(t.settings.SmtpSettings.Port), mail.WithSMTPAuth(mail.SMTPAuthLogin),
-		mail.WithUsername(t.settings.SmtpSettings.Username), mail.WithPassword(t.settings.SmtpSettings.Password))
+	client, err := mail.NewClient(sendMsg.SmtpSettings.Host, mail.WithPort(sendMsg.SmtpSettings.Port), mail.WithSMTPAuth(mail.SMTPAuthLogin),
+		mail.WithUsername(sendMsg.SmtpSettings.Username), mail.WithPassword(sendMsg.SmtpSettings.Password))
 
 	if err != nil {
 		return "", err
@@ -162,15 +164,10 @@ func (t *SmtpSender) Handle(ctx context.Context, responseHandler module.Handler,
 func (t *SmtpSender) Ports() []module.Port {
 	ports := []module.Port{
 		{
-			Name:   module.SettingsPort,
-			Label:  "Settings",
-			Source: true,
-			Configuration: SenderSettings{
-				SmtpSettings: SmtpServerSettings{
-					Host: "smtp.domain.com",
-					Port: 587,
-				},
-			},
+			Name:          module.SettingsPort,
+			Label:         "Settings",
+			Source:        true,
+			Configuration: SenderSettings{},
 		},
 		{
 			Name:   PortRequest,
@@ -179,6 +176,10 @@ func (t *SmtpSender) Ports() []module.Port {
 			Configuration: SendEmail{
 				Body:        "Email text",
 				ContentType: "text/html",
+				SmtpSettings: SmtpServerSettings{
+					Host: "smtp.domain.com",
+					Port: 587,
+				},
 				To: []Recipient{
 					{
 						Name:  "John Doe",

@@ -16,21 +16,21 @@ const (
 )
 
 type ChannelSenderSettings struct {
-	EnableSuccessPort bool `json:"enableSuccessPort" required:"true" title:"Enable Success port" description:"" propertyOrder:"1"`
-	EnableErrorPort   bool `json:"enableErrorPort" required:"true" title:"Enable Error Port" description:"If error happen during mail send, error port will emit an error message" propertyOrder:"2"`
+	EnableSuccessPort bool `json:"enableSuccessPort" required:"true" title:"Enable Success port" description:""`
+	EnableErrorPort   bool `json:"enableErrorPort" required:"true" title:"Enable Error Port" description:"If error happen during mail send, error port will emit an error message"`
 }
 
 type SendSlackChannelContext any
 
 type Message struct {
-	ChannelID  string `json:"channelID" required:"true" minLength:"1" title:"ChannelID" description:"" propertyOrder:"1"`
-	SlackToken string `json:"slackToken" required:"true" minLength:"1" title:"Slack token" description:"Bot User OAuth Token" propertyOrder:"2"`
-	Text       string `json:"text" required:"true" minLength:"1" title:"Message text" format:"textarea" propertyOrder:"3"`
+	ChannelID  string `json:"channelID" required:"true" minLength:"1" title:"ChannelID" description:""`
+	SlackToken string `json:"slackToken" required:"true" minLength:"1" title:"Slack token" description:"Bot User OAuth Token"`
+	Text       string `json:"text" required:"true" minLength:"1" title:"Message text" format:"textarea"`
 }
 
 type SendChannelRequest struct {
-	Context SendSlackChannelContext `json:"context" configurable:"true" title:"Context" propertyOrder:"1"`
-	Message Message                 `json:"slack_message" required:"true" title:"Slack Message" propertyOrder:"2"`
+	Context SendSlackChannelContext `json:"context" configurable:"true" title:"Context"`
+	Message Message                 `json:"slack_message" required:"true" title:"Slack Message"`
 }
 
 type SendSlackChannelSuccess struct {

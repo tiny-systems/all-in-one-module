@@ -29,9 +29,9 @@ type GetCalendars struct {
 }
 
 type GetCalendarsRequest struct {
-	Context GetCalendarsContext `json:"context" title:"Context" configurable:"true" propertyOrder:"1"`
-	Config  ClientConfig        `json:"config" title:"Config"  required:"true" description:"Client Config" propertyOrder:"2"`
-	Token   Token               `json:"token" required:"true" title:"Auth Token" propertyOrder:"7"`
+	Context GetCalendarsContext `json:"context" title:"Context" configurable:"true"`
+	Config  ClientConfig        `json:"config" title:"Config"  required:"true" description:"Client Config"`
+	Token   Token               `json:"token" required:"true" title:"Auth Token"`
 }
 
 type GetCalendarsResponse struct {

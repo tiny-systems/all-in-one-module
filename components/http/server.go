@@ -105,11 +105,11 @@ type ServerSettings struct {
 type ServerStartContext any
 
 type ServerStart struct {
-	Context      ServerStartContext `json:"context" configurable:"true" title:"Context" description:"Start context" propertyOrder:"1"`
-	AutoHostName bool               `json:"autoHostName" title:"Automatically generate hostname" description:"Use cluster auto subdomain setup if any." propertyOrder:"2"`
-	Hostnames    []string           `json:"hostnames" title:"Hostnames" required:"false" description:"List of virtual host this server should be bound to." propertyOrder:"3"` //requiredWhen:"['kind', 'equal', 'enum 1']"
-	ReadTimeout  int                `json:"readTimeout" required:"true" title:"Read Timeout" description:"Read timeout is the maximum duration for reading the entire request, including the body. A zero or negative value means there will be no timeout." propertyOrder:"4"`
-	WriteTimeout int                `json:"writeTimeout" required:"true" title:"Write Timeout" description:"Write timeout is the maximum duration before timing out writes of the response. It is reset whenever a new request's header is read." propertyOrder:"5"`
+	Context      ServerStartContext `json:"context" configurable:"true" title:"Context" description:"Start context"`
+	AutoHostName bool               `json:"autoHostName" title:"Automatically generate hostname" description:"Use cluster auto subdomain setup if any."`
+	Hostnames    []string           `json:"hostnames" title:"Hostnames" required:"false" description:"List of virtual host this server should be bound to."` //requiredWhen:"['kind', 'equal', 'enum 1']"
+	ReadTimeout  int                `json:"readTimeout" required:"true" title:"Read Timeout" description:"Read timeout is the maximum duration for reading the entire request, including the body. A zero or negative value means there will be no timeout."`
+	WriteTimeout int                `json:"writeTimeout" required:"true" title:"Write Timeout" description:"Write timeout is the maximum duration before timing out writes of the response. It is reset whenever a new request's header is read."`
 }
 
 type ServerRequest struct {
@@ -126,33 +126,33 @@ type ServerRequest struct {
 }
 
 type ServerStartControl struct {
-	Status string `json:"status" title:"Status" readonly:"true" propertyOrder:"2"`
-	Start  bool   `json:"start" format:"button" title:"Start" required:"true" description:"Start HTTP server" propertyOrder:"1"`
+	Status string `json:"status" title:"Status" readonly:"true"`
+	Start  bool   `json:"start" format:"button" title:"Start" required:"true" description:"Start HTTP server"`
 }
 
 type ServerStopControl struct {
-	Stop       bool     `json:"stop" format:"button" title:"Stop" required:"true" description:"Stop HTTP server" propertyOrder:"1"`
-	Status     string   `json:"status" title:"Status" readonly:"true" propertyOrder:"2"`
-	ListenAddr []string `json:"listenAddr" title:"Listen Address" readonly:"true" propertyOrder:"3"`
+	Stop       bool     `json:"stop" format:"button" title:"Stop" required:"true" description:"Stop HTTP server"`
+	Status     string   `json:"status" title:"Status" readonly:"true"`
+	ListenAddr []string `json:"listenAddr" title:"Listen Address" readonly:"true"`
 }
 
 type ServerStop struct {
 }
 
 type ServerStatus struct {
-	Context    ServerStartContext `json:"context" title:"Context" propertyOrder:"1"`
-	ListenAddr []string           `json:"listenAddr" title:"Listen Address" readonly:"true" propertyOrder:"2"`
-	IsRunning  bool               `json:"isRunning" title:"Is running" readonly:"true" propertyOrder:"3"`
+	Context    ServerStartContext `json:"context" title:"Context"`
+	ListenAddr []string           `json:"listenAddr" title:"Listen Address" readonly:"true"`
+	IsRunning  bool               `json:"isRunning" title:"Is running" readonly:"true"`
 }
 
 type ServerResponseBody any
 
 type ServerResponse struct {
-	RequestID   string             `json:"requestID" required:"true" title:"Request ID" minLength:"1" description:"To match response with request pass request ID to response port" propertyOrder:"1"`
-	StatusCode  int                `json:"statusCode" required:"true" title:"Status Code" description:"HTTP status code for response" minimum:"100" default:"200" maximum:"599" propertyOrder:"2"`
-	ContentType ContentType        `json:"contentType" required:"true" propertyOrder:"3"`
-	Headers     []Header           `json:"headers"  title:"Response headers" propertyOrder:"4"`
-	Body        ServerResponseBody `json:"body" title:"Response body" configurable:"true" propertyOrder:"5"`
+	RequestID   string             `json:"requestID" required:"true" title:"Request ID" minLength:"1" description:"To match response with request pass request ID to response port"`
+	StatusCode  int                `json:"statusCode" required:"true" title:"Status Code" description:"HTTP status code for response" minimum:"100" default:"200" maximum:"599"`
+	ContentType ContentType        `json:"contentType" required:"true"`
+	Headers     []Header           `json:"headers"  title:"Response headers"`
+	Body        ServerResponseBody `json:"body" title:"Response body" configurable:"true"`
 }
 
 type ContentType string
@@ -164,10 +164,7 @@ func (c ContentType) JSONSchema() (jsonschema.Schema, error) {
 		WithDefault(200).
 		WithEnum(MIMEApplicationJSON, MIMEApplicationXML, MIMETextHTML, MimeTextPlain).
 		WithDefault(MIMEApplicationJSON).
-		WithDescription("Content type of the response").
-		WithExtraProperties(map[string]interface{}{
-			"propertyOrder": 3,
-		})
+		WithDescription("Content type of the response")
 	return contentType, nil
 }
 

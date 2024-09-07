@@ -15,8 +15,8 @@ const (
 type SignalContext any
 
 type SignalSettings struct {
-	Context SignalContext `json:"context" required:"true" configurable:"true" title:"Context" description:"Arbitrary message to send" propertyOrder:"1"`
-	Auto    bool          `json:"auto" title:"Auto send" required:"true" description:"Send signal automatically" propertyOrder:"2"`
+	Context SignalContext `json:"context" required:"true" configurable:"true" title:"Context" description:"Arbitrary message to send"`
+	Auto    bool          `json:"auto" title:"Auto send" required:"true" description:"Send signal automatically"`
 }
 
 type Signal struct {
@@ -24,8 +24,8 @@ type Signal struct {
 }
 
 type SignalControl struct {
-	Context SignalContext `json:"context" required:"true" propertyOrder:"1" title:"Context"`
-	Send    bool          `json:"send" format:"button" title:"Send" required:"true" propertyOrder:"2"`
+	Context SignalContext `json:"context" required:"true" title:"Context"`
+	Send    bool          `json:"send" format:"button" title:"Send" required:"true"`
 }
 
 func (t *Signal) Instance() module.Component {

@@ -17,8 +17,8 @@ const (
 type DelayContext any
 
 type DelayInMessage struct {
-	Context DelayContext `json:"context" configurable:"true" title:"Context" description:"Arbitrary message to be delayed" propertyOrder:"1"`
-	Delay   int          `json:"delay" required:"true" title:"Delay (ms)" propertyOrder:"2"`
+	Context DelayContext `json:"context" configurable:"true" title:"Context" description:"Arbitrary message to be delayed"`
+	Delay   int          `json:"delay" required:"true" title:"Delay (ms)"`
 }
 
 type DelayOutMessage struct {

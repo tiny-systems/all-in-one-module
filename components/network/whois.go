@@ -25,8 +25,8 @@ var (
 type DomainWhoisRequestContext any
 
 type DomainWhoisRequest struct {
-	Context    DomainWhoisRequestContext `json:"context,omitempty" configurable:"true" title:"Context" description:"Arbitrary message to be send further" propertyOrder:"1"`
-	DomainName string                    `json:"domainName" required:"true" title:"Domain name to check" format:"hostname" propertyOrder:"2"`
+	Context    DomainWhoisRequestContext `json:"context,omitempty" configurable:"true" title:"Context" description:"Arbitrary message to be send further"`
+	DomainName string                    `json:"domainName" required:"true" title:"Domain name to check" format:"hostname"`
 }
 
 type DomainWhoisSuccess struct {

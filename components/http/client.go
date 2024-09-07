@@ -23,18 +23,19 @@ type Header struct {
 }
 
 type ClientRequestContext any
-type ClientRequestBody any
 
 type ClientRequestSettings struct {
 	EnableErrorPort bool `json:"enableErrorPort" required:"true" title:"Enable Error Port" description:"If request may fail, error port will emit an error message"`
 }
 
 type ClientRequest struct {
-	Context ClientRequestContext `json:"context" configurable:"true" title:"Context" description:"Message to be sent further" propertyOrder:"1"`
-	Method  string               `json:"method" required:"true" title:"Method" enum:"GET,POST,PATCH,PUT,DELETE" enumTitles:"GET,POST,PATCH,PUT,DELETE" colSpan:"col-span-3" propertyOrder:"2"`
-	URL     string               `json:"url" required:"true" title:"URL" format:"uri" propertyOrder:"3"`
-	Headers []Header             `json:"headers" required:"true" title:"Headers" propertyOrder:"4"`
-	Body    ClientRequestBody    `json:"body" configurable:"true" title:"Request Body" propertyOrder:"5"`
+	Context ClientRequestContext `json:"context,omitempty" configurable:"true" title:"Context" description:"Message to be sent further"`
+	Method  string               `json:"method" required:"true" title:"Method" enum:"GET,POST,PATCH,PUT,DELETE" enumTitles:"GET,POST,PATCH,PUT,DELETE" colSpan:"col-span-6"`
+	Timeout int                  `json:"timeout" required:"true" title:"Request Timeout" colSpan:"col-span-6"`
+
+	URL     string   `json:"url" required:"true" title:"URL" format:"uri"`
+	Headers []Header `json:"headers" required:"true" title:"Headers"`
+	Body    string   `json:"body" format:"textarea" title:"Request Body"`
 }
 
 type Response struct {
@@ -57,11 +58,11 @@ type Client struct {
 	settings ClientRequestSettings
 }
 
-func (h Client) Instance() module.Component {
-	return Client{}
+func (h *Client) Instance() module.Component {
+	return &Client{}
 }
 
-func (h Client) GetInfo() module.ComponentInfo {
+func (h *Client) GetInfo() module.ComponentInfo {
 	return module.ComponentInfo{
 		Name:        ClientComponent,
 		Description: "HTTP Client",
@@ -70,43 +71,57 @@ func (h Client) GetInfo() module.ComponentInfo {
 	}
 }
 
-func (h Client) Handle(ctx context.Context, handler module.Handler, port string, message interface{}) error {
-	if port != "request" {
-		return fmt.Errorf("invalid port")
+func (h *Client) Handle(ctx context.Context, handler module.Handler, port string, msg interface{}) error {
+
+	switch port {
+	case module.SettingsPort:
+		// compile template
+		in, ok := msg.(ClientRequestSettings)
+		if !ok {
+			return fmt.Errorf("invalid settings")
+		}
+		h.settings = in
+
+		return nil
+
+	case ClientRequestPort:
+		in, ok := msg.(ClientRequest)
+		if !ok {
+			return fmt.Errorf("invalid message")
+		}
+
+		ctx, cancel := context.WithTimeout(ctx, time.Second*time.Duration(in.Timeout))
+		defer cancel()
+
+		r, err := http.NewRequestWithContext(ctx, in.Method, in.URL, nil)
+		if err != nil {
+			return err
+		}
+
+		c := http.Client{}
+
+		resp, err := c.Do(r)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+
+		b, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		return handler(ctx, ClientResponsePort, ClientResponse{
+			Response: string(b),
+			Request:  in,
+		})
+
+	default:
+		return fmt.Errorf("port %s is not supoprted", port)
 	}
 
-	in, ok := message.(ClientRequest)
-	if !ok {
-		return fmt.Errorf("invalid message")
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
-	defer cancel()
-
-	r, err := http.NewRequestWithContext(ctx, in.Method, in.URL, nil)
-	if err != nil {
-		return err
-	}
-
-	c := http.Client{}
-
-	resp, err := c.Do(r)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	b, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-	return handler(ctx, ClientResponsePort, ClientResponse{
-		Response: string(b),
-		Request:  in,
-	})
 }
 
-func (h Client) Ports() []module.Port {
+func (h *Client) Ports() []module.Port {
 	ports := []module.Port{
 		{
 			Name:   ClientRequestPort,
@@ -116,20 +131,30 @@ func (h Client) Ports() []module.Port {
 				Method:  http.MethodGet,
 				Headers: make([]Header, 0),
 				URL:     "http://example.com",
+				Timeout: 10,
 			},
 			Position: module.Left,
 		},
+
 		{
-			Name:          "response",
+			Name:          ClientResponsePort,
 			Label:         "Response",
-			Position:      module.Left,
+			Position:      module.Right,
 			Configuration: ClientResponse{},
+		},
+
+		{
+			Name:          module.SettingsPort,
+			Label:         "Settings",
+			Configuration: h.settings,
+			Source:        true,
 		},
 	}
 
 	if !h.settings.EnableErrorPort {
 		return ports
 	}
+
 	return append(ports, module.Port{
 		Name:          ClientErrorPort,
 		Label:         "Error",

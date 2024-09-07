@@ -18,8 +18,8 @@ type SplitContext any
 type SplitItemContext any
 
 type SplitInMessage struct {
-	Context SplitContext       `json:"context" title:"Context" configurable:"true"  description:"Message to be send further with each item"  configurable:"true" propertyOrder:"1"`
-	Array   []SplitItemContext `json:"array,omitempty" title:"Array" default:"null" description:"Array of items to be split" required:"true" propertyOrder:"2"`
+	Context SplitContext       `json:"context" title:"Context" configurable:"true"  description:"Message to be send further with each item"  configurable:"true"`
+	Array   []SplitItemContext `json:"array,omitempty" title:"Array" default:"null" description:"Array of items to be split" required:"true"`
 }
 
 type SplitOutMessage struct {

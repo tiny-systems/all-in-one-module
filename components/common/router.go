@@ -46,8 +46,8 @@ func (r RouteName) JSONSchema() (jsonschema.Schema, error) {
 }
 
 type Condition struct {
-	RouteName RouteName `json:"route" title:"Route" required:"true" propertyOrder:"1"`
-	Condition bool      `json:"condition,omitempty" required:"true" title:"Condition" propertyOrder:"2"`
+	RouteName RouteName `json:"route" title:"Route" required:"true"`
+	Condition bool      `json:"condition,omitempty" required:"true" title:"Condition"`
 }
 
 type RouterSettings struct {
@@ -63,8 +63,8 @@ type RouterOutMessage struct {
 }
 
 type RouterInMessage struct {
-	Context    RouterContext `json:"context" configurable:"true" required:"true" title:"Context" description:"Arbitrary message to be routed" propertyOrder:"1"`
-	Conditions []Condition   `json:"conditions,omitempty" required:"true" title:"Conditions" minItems:"1" uniqueItems:"true" propertyOrder:"2"`
+	Context    RouterContext `json:"context" configurable:"true" required:"true" title:"Context" description:"Arbitrary message to be routed"`
+	Conditions []Condition   `json:"conditions,omitempty" required:"true" title:"Conditions" minItems:"1" uniqueItems:"true"`
 }
 
 type Router struct {

@@ -18,14 +18,14 @@ const (
 type TickerContext any
 
 type TickerStatus struct {
-	Status string `json:"status" readonly:"true" title:"Status" colSpan:"col-span-6" propertyOrder:"1"`
-	Reset  bool   `json:"reset" format:"button" title:"Reset" required:"true" colSpan:"col-span-6" propertyOrder:"2"`
+	Status string `json:"status" readonly:"true" title:"Status" colSpan:"col-span-6"`
+	Reset  bool   `json:"reset" format:"button" title:"Reset" required:"true" colSpan:"col-span-6"`
 }
 
 type TickerSettings struct {
-	Period            int           `json:"period" required:"true" title:"Periodicity (ms)" minimum:"10" default:"1000" propertyOrder:"1"`
-	EnableControlPort bool          `json:"enableControlPort" required:"true" title:"Enable control port" description:"Control port allows control ticker externally" propertyOrder:"3"`
-	Context           TickerContext `json:"context" configurable:"true" title:"Context" description:"Arbitrary message to be send each period of time"`
+	Context          TickerContext `json:"context" configurable:"true" title:"Context" description:"Arbitrary message to be send each period of time"`
+	Period           int           `json:"period" required:"true" title:"Periodicity (ms)" minimum:"10" default:"1000"`
+	EnableStatusPort bool          `json:"enableStatusPort" required:"true" title:"Enable status port" description:"Status port"`
 }
 
 type Ticker struct {
@@ -89,14 +89,6 @@ func (t *Ticker) Handle(ctx context.Context, handler module.Handler, port string
 func (t *Ticker) Ports() []module.Port {
 	ports := []module.Port{
 		{
-			Name:   TickerStatusPort,
-			Label:  "Status",
-			Source: true,
-			Configuration: TickerStatus{
-				Status: fmt.Sprintf("All good: %d", t.counter),
-			},
-		},
-		{
 			Name:   module.SettingsPort,
 			Label:  "Settings",
 			Source: true,
@@ -113,13 +105,16 @@ func (t *Ticker) Ports() []module.Port {
 			Configuration: new(TickerContext),
 		},
 	}
-	if t.settings.EnableControlPort {
+
+	if t.settings.EnableStatusPort {
 		ports = append(ports, module.Port{
-			Position:      module.Left,
-			Name:          module.ControlPort,
-			Label:         "Control",
-			Source:        true,
-			Configuration: TickerControl{},
+			Name:     TickerStatusPort,
+			Label:    "Status",
+			Source:   true,
+			Position: module.Bottom,
+			Configuration: TickerStatus{
+				Status: fmt.Sprintf("All good: %d", t.counter),
+			},
 		})
 	}
 	return ports

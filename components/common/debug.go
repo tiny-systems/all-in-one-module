@@ -15,15 +15,15 @@ const (
 type DebugContext any
 
 type DebugSettings struct {
-	Context DebugContext `json:"context" configurable:"true" required:"true" title:"Context" description:"Debug message" propertyOrder:"1"`
+	Context DebugContext `json:"context" configurable:"true" required:"true" title:"Context" description:"Debug message"`
 }
 
 type DebugIn struct {
-	Context DebugContext `json:"context" configurable:"false" required:"true" title:"Context" propertyOrder:"1" title:"Context"`
+	Context DebugContext `json:"context" configurable:"false" required:"true" title:"Context" title:"Context"`
 }
 
 type DebugControl struct {
-	Context DebugContext `json:"context" readonly:"true" required:"true" propertyOrder:"1" title:"Context"`
+	Context DebugContext `json:"context" readonly:"true" required:"true" title:"Context"`
 }
 
 type Debug struct {

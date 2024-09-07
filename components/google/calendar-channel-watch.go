@@ -35,11 +35,11 @@ type CalendarChannelWatchSettings struct {
 type CalendarChannelWatchContext any
 
 type CalendarChannelWatchRequest struct {
-	Context  CalendarChannelWatchContext         `json:"context" configurable:"true" title:"Context" description:"Arbitrary message to be send further" propertyOrder:"1"`
-	Calendar CalendarChannelWatchRequestCalendar `json:"calendar" required:"true" title:"Calendar" propertyOrder:"2"`
-	Channel  CalendarWatchChannel                `json:"channel" required:"true" title:"Channel" propertyOrder:"3"`
-	Token    Token                               `json:"token" required:"true" title:"Token" propertyOrder:"4"`
-	Config   ClientConfig                        `json:"config" required:"true" title:"Client credentials" propertyOrder:"5"`
+	Context  CalendarChannelWatchContext         `json:"context" configurable:"true" title:"Context" description:"Arbitrary message to be send further"`
+	Calendar CalendarChannelWatchRequestCalendar `json:"calendar" required:"true" title:"Calendar"`
+	Channel  CalendarWatchChannel                `json:"channel" required:"true" title:"Channel"`
+	Token    Token                               `json:"token" required:"true" title:"Token"`
+	Config   ClientConfig                        `json:"config" required:"true" title:"Client credentials"`
 }
 
 type CalendarChannelWatchRequestCalendar struct {

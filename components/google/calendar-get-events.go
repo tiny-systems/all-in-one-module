@@ -22,15 +22,15 @@ const (
 type CalendarGetEventsContext any
 
 type CalendarGetEventsRequest struct {
-	Context     CalendarGetEventsContext `json:"context" configurable:"true" title:"Context" description:"Arbitrary message to be send further" propertyOrder:"1"`
-	CalendarId  string                   `json:"calendarId" required:"true" default:"primary" minLength:"1" title:"Calendar ID" propertyOrder:"2"`
-	ShowDeleted bool                     `json:"showDeleted" required:"true" title:"Show deleted events" default:"true" propertyOrder:"3"`
-	StartDate   time.Time                `json:"startDate" title:"Start date" propertyOrder:"4"`
-	EndDate     time.Time                `json:"endDate" title:"End date" propertyOrder:"5"`
-	SyncToken   string                   `json:"syncToken" title:"Sync Token" propertyOrder:"6"`
-	PageToken   string                   `json:"pageToken" title:"Page Token" propertyOrder:"7"`
-	Token       Token                    `json:"token" required:"true" title:"Auth Token" propertyOrder:"8"`
-	Config      ClientConfig             `json:"config" required:"true" title:"Client credentials" propertyOrder:"9"`
+	Context     CalendarGetEventsContext `json:"context" configurable:"true" title:"Context" description:"Arbitrary message to be send further"`
+	CalendarId  string                   `json:"calendarId" required:"true" default:"primary" minLength:"1" title:"Calendar ID"`
+	ShowDeleted bool                     `json:"showDeleted" required:"true" title:"Show deleted events" default:"true"`
+	StartDate   time.Time                `json:"startDate" title:"Start date"`
+	EndDate     time.Time                `json:"endDate" title:"End date"`
+	SyncToken   string                   `json:"syncToken" title:"Sync Token"`
+	PageToken   string                   `json:"pageToken" title:"Page Token"`
+	Token       Token                    `json:"token" required:"true" title:"Auth Token"`
+	Config      ClientConfig             `json:"config" required:"true" title:"Client credentials"`
 }
 
 type ClientConfig struct {

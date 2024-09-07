@@ -19,9 +19,9 @@ const (
 type ExchangeAuthCodeInContext any
 
 type ExchangeAuthCodeInMessage struct {
-	Context  ExchangeAuthCodeInContext `json:"context" title:"Context" configurable:"true" propertyOrder:"1"`
-	Config   ClientConfig              `json:"config" title:"Config"  required:"true" description:"Client Config" propertyOrder:"2"`
-	AuthCode string                    `json:"authCode" required:"true" title:"Authorisation code" propertyOrder:"3"`
+	Context  ExchangeAuthCodeInContext `json:"context" title:"Context" configurable:"true"`
+	Config   ClientConfig              `json:"config" title:"Config"  required:"true" description:"Client Config"`
+	AuthCode string                    `json:"authCode" required:"true" title:"Authorisation code"`
 }
 
 type ExchangeAuthCodeSettings struct {
@@ -29,8 +29,8 @@ type ExchangeAuthCodeSettings struct {
 }
 
 type ExchangeAuthCodeOutMessage struct {
-	Context ExchangeAuthCodeInContext `json:"context" title:"Context" propertyOrder:"1"`
-	Token   Token                     `json:"token" propertyOrder:"2"`
+	Context ExchangeAuthCodeInContext `json:"context" title:"Context"`
+	Token   Token                     `json:"token"`
 }
 
 type ExchangeAuthCodeError struct {

@@ -19,10 +19,10 @@ const (
 type GetAuthUrlInContext any
 
 type GetAuthUrlInMessage struct {
-	Context       GetAuthUrlInContext `json:"context" title:"Context" configurable:"true" propertyOrder:"1"`
-	Config        ClientConfig        `json:"config" required:"true" title:"Client credentials" propertyOrder:"2"`
-	AccessType    string              `json:"accessType" title:"Type of access" enum:"offline,online" enumTitles:"Offline,Online" required:"true" propertyOrder:"3"`
-	ApprovalForce bool                `json:"approvalForce" title:"ApprovalForce" required:"true" propertyOrder:"4"`
+	Context       GetAuthUrlInContext `json:"context" title:"Context" configurable:"true"`
+	Config        ClientConfig        `json:"config" required:"true" title:"Client credentials"`
+	AccessType    string              `json:"accessType" title:"Type of access" enum:"offline,online" enumTitles:"Offline,Online" required:"true"`
+	ApprovalForce bool                `json:"approvalForce" title:"ApprovalForce" required:"true"`
 }
 
 type GetAuthUrlSettings struct {
