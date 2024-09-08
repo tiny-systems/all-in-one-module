@@ -147,7 +147,7 @@ func (h *Client) Handle(ctx context.Context, handler module.Handler, port string
 		var result interface{}
 
 		switch {
-		case strings.HasPrefix(cType, MIMEApplicationJSON) || in.Request.ContentType == MIMEApplicationJSON:
+		case strings.HasPrefix(cType, MIMEApplicationJSON) || in.Request.ResponseContentType == MIMEApplicationJSON:
 			root, err := ajson.Unmarshal(b)
 
 			if err != nil {
@@ -171,7 +171,7 @@ func (h *Client) Handle(ctx context.Context, handler module.Handler, port string
 				})
 			}
 
-		case strings.HasPrefix(cType, MIMEApplicationXML), strings.HasPrefix(cType, MIMETextXML) || in.Request.ContentType == MIMEApplicationXML:
+		case strings.HasPrefix(cType, MIMEApplicationXML) || strings.HasPrefix(cType, MIMETextXML) || in.Request.ResponseContentType == MIMEApplicationXML:
 
 			mxj.SetAttrPrefix("")
 			m, err := mxj.NewMapXml(b, false)
