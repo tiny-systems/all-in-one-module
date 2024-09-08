@@ -120,16 +120,17 @@ func (h *Client) Handle(ctx context.Context, handler module.Handler, port string
 		case MIMEApplicationForm:
 
 		case MIMEMultipartForm:
-
 		}
 
-		r, err := http.NewRequestWithContext(ctx, in.Request.Method, in.Request.URL, bytes.NewReader(requestBody))
+		req, err := http.NewRequestWithContext(ctx, in.Request.Method, in.Request.URL, bytes.NewReader(requestBody))
 		if err != nil {
 			return err
 		}
-
+		for _, header := range in.Request.Headers {
+			req.Header.Set(header.Key, header.Value)
+		}
 		c := http.Client{}
-		resp, err := c.Do(r)
+		resp, err := c.Do(req)
 		if err != nil {
 			return err
 		}
