@@ -29,20 +29,25 @@ type DomainWhoisRequest struct {
 	DomainName string                    `json:"domainName" required:"true" title:"Domain name to check" format:"hostname"`
 }
 
+type WhoisSettings struct {
+	EnableErrorPort bool `json:"enableErrorPort" required:"true" title:"Enable Error Port" description:"If request may fail, error port will emit an error message"`
+}
+
 type DomainWhoisSuccess struct {
+	Context    DomainWhoisRequestContext `json:"context,omitempty"`
 	WhoIs      whoisparser.WhoisInfo     `json:"whoIs"`
 	DomainName string                    `json:"domainName" format:"hostname"`
-	Context    DomainWhoisRequestContext `json:"context,omitempty"`
 }
 
 type DomainWhoisError struct {
-	Error      string             `json:"error"`
-	ErrorType  string             `json:"errorType" enum:"parseError,fetchError"`
-	DomainName string             `json:"domainName" format:"hostname"`
-	Request    DomainWhoisRequest `json:"request,omitempty"`
+	Context    DomainWhoisRequestContext `json:"context,omitempty"`
+	Error      string                    `json:"error"`
+	ErrorType  string                    `json:"errorType" enum:"parseError,fetchError"`
+	DomainName string                    `json:"domainName" format:"hostname"`
 }
 
 type Whois struct {
+	settings WhoisSettings
 }
 
 func (t *Whois) Instance() module.Component {
@@ -60,42 +65,65 @@ func (t *Whois) GetInfo() module.ComponentInfo {
 
 func (t *Whois) Handle(ctx context.Context, handler module.Handler, port string, msg interface{}) error {
 
-	if port != DomainWhoisRequestPort {
-		return fmt.Errorf("port %s is not supported", port)
-	}
+	switch port {
+	case module.SettingsPort:
+		// compile template
+		in, ok := msg.(WhoisSettings)
+		if !ok {
+			return fmt.Errorf("invalid settings")
+		}
+		t.settings = in
+		return nil
 
-	in, ok := msg.(DomainWhoisRequest)
-	if !ok {
-		return fmt.Errorf("invalid message")
-	}
-	resultRaw, err := whois.Whois(in.DomainName)
-	if err != nil {
-		return handler(ctx, DomainWhoisErrorPort, DomainWhoisError{
-			ErrorType:  ErrFetch.Error(),
-			Request:    in,
+	case DomainWhoisRequestPort:
+
+		in, ok := msg.(DomainWhoisRequest)
+		if !ok {
+			return fmt.Errorf("invalid message")
+		}
+
+		resultRaw, err := whois.Whois(in.DomainName)
+		if err != nil {
+			if !t.settings.EnableErrorPort {
+				return err
+			}
+
+			return handler(ctx, DomainWhoisErrorPort, DomainWhoisError{
+				ErrorType:  ErrFetch.Error(),
+				Context:    in.Context,
+				DomainName: in.DomainName,
+				Error:      err.Error(),
+			})
+		}
+		result, err := whoisparser.Parse(resultRaw)
+		if err != nil {
+
+			if !t.settings.EnableErrorPort {
+				return err
+			}
+
+			return handler(ctx, DomainWhoisErrorPort, DomainWhoisError{
+				ErrorType:  ErrParse.Error(),
+				Context:    in.Context,
+				DomainName: in.DomainName,
+				Error:      err.Error(),
+			})
+		}
+
+		resp := DomainWhoisSuccess{
+			WhoIs:      result,
 			DomainName: in.DomainName,
-			Error:      err.Error(),
-		})
+			Context:    in.Context,
+		}
+		return handler(ctx, DomainWhoisResponsePort, resp)
+
+	default:
+		return fmt.Errorf("port %s is not supoprted", port)
 	}
-	result, err := whoisparser.Parse(resultRaw)
-	if err != nil {
-		return handler(ctx, DomainWhoisErrorPort, DomainWhoisError{
-			ErrorType:  ErrParse.Error(),
-			Request:    in,
-			DomainName: in.DomainName,
-			Error:      err.Error(),
-		})
-	}
-	resp := DomainWhoisSuccess{
-		WhoIs:      result,
-		DomainName: in.DomainName,
-		Context:    in.Context,
-	}
-	return handler(ctx, DomainWhoisResponsePort, resp)
 }
 
 func (t *Whois) Ports() []module.Port {
-	return []module.Port{
+	ports := []module.Port{
 		{
 			Name:   DomainWhoisRequestPort,
 			Label:  "Request",
@@ -113,13 +141,22 @@ func (t *Whois) Ports() []module.Port {
 			Position:      module.Right,
 		},
 		{
+			Name:          module.SettingsPort,
+			Label:         "Settings",
+			Configuration: t.settings,
+			Source:        true,
+		},
+	}
+	if t.settings.EnableErrorPort {
+		ports = append(ports, module.Port{
 			Name:          DomainWhoisErrorPort,
 			Label:         "Error",
 			Source:        false,
 			Configuration: DomainWhoisError{},
-			Position:      module.Right,
-		},
+			Position:      module.Bottom,
+		})
 	}
+	return ports
 }
 
 var _ module.Component = (*Whois)(nil)
