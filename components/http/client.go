@@ -42,10 +42,11 @@ type ClientRequestRequest struct {
 	Method  string `json:"method" required:"true" title:"Method" enum:"GET,POST,PATCH,PUT,DELETE" enumTitles:"GET,POST,PATCH,PUT,DELETE" colSpan:"col-span-6"`
 	Timeout int    `json:"timeout" required:"true" title:"Request Timeout" colSpan:"col-span-6"`
 
-	URL         string      `json:"url" required:"true" title:"URL" format:"uri"`
-	ContentType ContentType `json:"contentType" required:"true"`
-	Headers     []Header    `json:"headers" required:"true" title:"Headers"`
-	Body        any         `json:"body" configurable:"true" title:"Request Body"`
+	URL                 string      `json:"url" required:"true" title:"URL" format:"uri"`
+	ContentType         ContentType `json:"contentType" required:"true"`
+	Headers             []Header    `json:"headers" required:"true" title:"Headers"`
+	Body                any         `json:"body" configurable:"true" title:"Request Body"`
+	ResponseContentType ContentType `json:"responseContentType,omitempty" title:"Response Content Type" description:"Override response content type"`
 }
 
 type ClientResponse struct {
@@ -146,7 +147,7 @@ func (h *Client) Handle(ctx context.Context, handler module.Handler, port string
 		var result interface{}
 
 		switch {
-		case strings.HasPrefix(cType, MIMEApplicationJSON):
+		case strings.HasPrefix(cType, MIMEApplicationJSON) || in.Request.ContentType == MIMEApplicationJSON:
 			root, err := ajson.Unmarshal(b)
 
 			if err != nil {
@@ -170,7 +171,7 @@ func (h *Client) Handle(ctx context.Context, handler module.Handler, port string
 				})
 			}
 
-		case strings.HasPrefix(cType, MIMEApplicationXML), strings.HasPrefix(cType, MIMETextXML):
+		case strings.HasPrefix(cType, MIMEApplicationXML), strings.HasPrefix(cType, MIMETextXML) || in.Request.ContentType == MIMEApplicationXML:
 
 			mxj.SetAttrPrefix("")
 			m, err := mxj.NewMapXml(b, false)
