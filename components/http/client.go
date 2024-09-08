@@ -63,8 +63,8 @@ type ClientResponseResponse struct {
 
 type ClientError struct {
 	Context ClientRequestContext `json:"context" configurable:"true" required:"true" title:"Context" description:"Message to be sent further"`
-	Request ClientRequestRequest `json:"request"`
-	Error   string               `json:"response"`
+	Request ClientRequestRequest `json:"request" required:"true"`
+	Error   string               `json:"error" required:"true"`
 }
 
 type Client struct {
