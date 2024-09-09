@@ -43,7 +43,7 @@ type ClientRequestRequest struct {
 	Timeout int    `json:"timeout" required:"true" title:"Request Timeout" colSpan:"col-span-6"`
 
 	URL                 string      `json:"url" required:"true" title:"URL" format:"uri"`
-	ContentType         ContentType `json:"contentType" required:"true"`
+	ContentType         ContentType `json:"contentType" title:"Request Content Type" required:"true"`
 	Headers             []Header    `json:"headers" required:"true" title:"Headers"`
 	Body                any         `json:"body" configurable:"true" title:"Request Body"`
 	ResponseContentType ContentType `json:"responseContentType,omitempty" title:"Response Content Type" description:"Override response content type"`
@@ -63,9 +63,10 @@ type ClientResponseResponse struct {
 }
 
 type ClientError struct {
-	Context ClientRequestContext `json:"context" configurable:"true" required:"true" title:"Context" description:"Message to be sent further"`
-	Request ClientRequestRequest `json:"request" required:"true"`
-	Error   string               `json:"error" required:"true"`
+	Context  ClientRequestContext   `json:"context" configurable:"true" required:"true" title:"Context" description:"Message to be sent further"`
+	Request  ClientRequestRequest   `json:"request" required:"true"`
+	Response ClientResponseResponse `json:"response"`
+	Error    string                 `json:"error" required:"true"`
 }
 
 type Client struct {
@@ -201,6 +202,27 @@ func (h *Client) Handle(ctx context.Context, handler module.Handler, port string
 					Value: vv,
 				})
 			}
+		}
+
+		if resp.StatusCode >= 400 {
+			// error range
+			// send to error port
+
+			if !h.settings.EnableErrorPort {
+				return fmt.Errorf(fmt.Sprint(result))
+			}
+
+			return handler(ctx, ClientErrorPort, ClientError{
+				Context: in.Context,
+				Request: in.Request,
+				Error:   fmt.Sprint(result),
+				Response: ClientResponseResponse{
+					Body:       result,
+					Headers:    headers,
+					Status:     resp.Status,
+					StatusCode: resp.StatusCode,
+				},
+			})
 		}
 
 		return handler(ctx, ClientResponsePort, ClientResponse{
