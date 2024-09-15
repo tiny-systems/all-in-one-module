@@ -37,6 +37,7 @@ func (r RouteName) JSONSchema() (jsonschema.Schema, error) {
 	name.AddType(jsonschema.String)
 	name.WithTitle("Route")
 	name.WithDefault(r.Value)
+	name.WithExtraPropertiesItem("shared", true)
 	enums := make([]interface{}, len(r.Options))
 	for k, v := range r.Options {
 		enums[k] = v

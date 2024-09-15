@@ -19,9 +19,10 @@ const (
 type ExchangeAuthCodeInContext any
 
 type ExchangeAuthCodeInMessage struct {
-	Context  ExchangeAuthCodeInContext `json:"context" title:"Context" configurable:"true"`
-	Config   ClientConfig              `json:"config" title:"Config"  required:"true" description:"Client Config"`
-	AuthCode string                    `json:"authCode" required:"true" title:"Authorisation code"`
+	Context     ExchangeAuthCodeInContext `json:"context" title:"Context" configurable:"true"`
+	Config      ClientConfig              `json:"config" title:"Config"  required:"true" description:"Client Config"`
+	AuthCode    string                    `json:"authCode" required:"true" title:"Authorisation code"`
+	RedirectURL string                    `json:"redirectUrl" title:"Redirect URL" description:"Overrides redirect URL from config"`
 }
 
 type ExchangeAuthCodeSettings struct {
@@ -58,6 +59,10 @@ func (a *ExchangeAuthCode) exchange(ctx context.Context, in ExchangeAuthCodeInMe
 	config, err := google.ConfigFromJSON([]byte(in.Config.Credentials), in.Config.Scopes...)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse client secret file to config: %v", err)
+	}
+
+	if in.RedirectURL != "" {
+		config.RedirectURL = in.RedirectURL
 	}
 	return config.Exchange(ctx, in.AuthCode)
 }

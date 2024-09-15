@@ -17,9 +17,9 @@ require (
 	github.com/slack-go/slack v0.12.2
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/viper v1.15.0
-	github.com/spyzhov/ajson v0.9.3
+	github.com/spyzhov/ajson v0.9.4
 	github.com/swaggest/jsonschema-go v0.3.70
-	github.com/tiny-systems/module v0.1.82
+	github.com/tiny-systems/module v0.1.84
 	github.com/wneessen/go-mail v0.3.9
 	go.opentelemetry.io/otel/trace v1.23.1
 	go.uber.org/atomic v1.11.0

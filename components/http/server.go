@@ -349,6 +349,16 @@ func (h *Server) start(ctx context.Context, msg ServerStart, handler module.Hand
 		listenPort = annotationPort
 	}
 
+	if len(msg.Hostnames) == 1 {
+		portParts := strings.Split(msg.Hostnames[0], ":")
+		if len(portParts) == 2 {
+			// we have single hostname defined with explicit port defined, try parse it and use it
+			if port, err := strconv.Atoi(portParts[1]); err == nil {
+				listenPort = port
+			}
+		}
+	}
+
 	var listenAddr = ":0"
 
 	if listenPort > 0 {
